@@ -1,112 +1,62 @@
 ---
 name: product-ui
-description: Design, implement, refactor, or review task-oriented product interfaces across web and native projects. Use for non-trivial screens, forms, tables, lists, dashboards, navigation, workflows, responsive changes, UI states, accessibility, or feedback that an interface is generic, AI-like, or hard to scan. Preserve the project's design system and use software-evolution for architecture and change-boundary decisions.
+description: Design or improve task-oriented product interfaces. Use for substantial UI work when information structure or interaction quality matters and for interfaces reported as generic or difficult to use.
 ---
 
 # Product UI
 
-Translate real user tasks, information relationships, and interaction contracts into clear product interfaces. Do not begin from a generic visual template or optimize for the fewest visible elements.
+## Governing outcome
 
-This skill owns UI-specific judgment. `software-evolution` continues to own root-cause analysis, abstraction and change boundaries, compatibility, and contract verification.
+The interface must let the user understand the relevant information and perform the intended task. Its structure must express the actual product contract. Familiar visual patterns are not evidence that this outcome is satisfied.
 
-## Precedence
+Choose the information and action hierarchy before decorative treatment. Simplicity removes unnecessary complexity while preserving what the task requires. Neither fewer visible elements nor more whitespace is an independent goal.
 
-Before applying global guidance, inspect the product's:
+When the task model changes, apply the global reconstruction principle to the whole affected experience. Removing a decorative symptom is insufficient if the structure that produced it remains unclear.
 
-- purpose, users, and primary workflows;
-- established design system and component library;
-- tokens, typography, spacing, iconography, and content conventions;
-- nearby screens and interaction patterns;
-- platform conventions and accessibility requirements.
+## Responsibility
 
-Preserve coherent project-specific decisions. Global guidance supplies a decision procedure and quality criteria, not a replacement visual identity.
+This skill owns UI semantics and presentation. Use `software-evolution` for the underlying software boundary and contract verification. Let the product's established design system govern visual decisions rather than imposing a global style.
 
-Reuse an existing component when its semantics and interaction contract fit. If reuse would force the wrong behavior or meaning, apply `software-evolution` to improve the owning abstraction instead of preserving a bad fit for superficial consistency.
+Inspect the actual product and its nearby patterns. Package names and isolated screenshots do not establish the complete design system. Reuse an existing component when its interaction contract fits. When consumers repeatedly compensate for a bad fit, improve the owning abstraction with `software-evolution`.
 
-## Scale the procedure
+## Establish the task model
 
-Use a brief internal pass for a small, local UI change whose task, semantics, states, and project pattern are already clear.
+Identify the user's primary decision or action. Determine what they must recognize before acting and which information they must compare. Inspect the actual data and permissions that determine the experience.
 
-Use the complete procedure for:
+Establish the states the product can produce. Separate conditions when they have different causes or require different next actions. Do not invent states merely to fill a generic checklist.
 
-- a new screen or page;
-- a dashboard, form, data table, list, navigation surface, or workflow;
-- onboarding, settings, or a major component;
-- responsive restructuring;
-- loading, empty, error, permission, or other state design;
-- a substantial UI refactor;
-- an interface reported as generic, AI-like, confusing, or difficult to scan.
+Inspect rendered behavior when available. Use a brief internal pass for a local change whose task and established pattern are clear. A substantial interface change requires forming the complete task model before choosing components; it does not require a long design report.
 
-Do not turn the procedure into mandatory long user-facing design prose.
+## Derive the structure
 
-## 1. Inspect
+Represent information according to its relationships. Preserve meaningful groups and comparison structure. A delimiter-separated string cannot substitute for a layout when the fields have different roles.
 
-Establish:
+Give the primary task an evident scanning path. Distinguish essential information from detail that can safely be disclosed later. Choose density according to the work the user performs rather than a generic page template.
 
-- the user's primary task and decision;
-- the information they need before acting;
-- the current UI and nearby product patterns;
-- the actual data shape and interaction contract;
-- the existing design system, components, and tokens;
-- permissions, failure behavior, and platform constraints;
-- the states the product contract can actually produce.
+Choose controls by their interaction meaning. Accessibility relationships must express the same structure as the visible interface. Include those semantics while building the experience rather than repairing them after decoration.
 
-Inspect rendered behavior when available. Do not infer a design system only from package names or isolated artifacts.
+Read [UI semantics and states](references/ui-semantics-and-states.md) when the task depends on structured content or nontrivial interaction behavior. Apply its state and accessibility criteria to the product's actual contract.
 
-## 2. Structure
+## Implement the product model
 
-Before selecting components, answer:
+Use the established visual language to express hierarchy. Spacing should communicate relationships. Persistent text must add information the user needs rather than explain a title or compensate for an unclear control.
 
-1. What is the main job of this surface?
-2. What must be recognized first?
-3. Which information forms semantic groups?
-4. Which values must be compared?
-5. Which items are states, actions, navigation, or supplementary detail?
-6. What must remain visible, and what can be progressively disclosed?
-7. How do frequency and importance differ?
-8. What density supports the actual scanning and decision pattern?
-9. How must the structure change at narrow widths?
-10. Which loading, empty, error, disabled, read-only, permission, and partial states are real?
+Responsive structure must preserve the task at the relevant widths. Reconsider priority and interaction when space changes; uniform shrinking or unconditional stacking does not establish usability.
 
-Choose an information and action hierarchy before decorative treatment. Simplicity means removing unnecessary complexity while keeping the information required for the task; it does not mean minimizing visible information or whitespace-maximizing every surface.
+Use the `software-evolution` change-axis test for shared UI abstractions. Similar appearance alone does not justify a component. Shared product policy can justify a common owner. Reuse a token that already owns a decision and introduce a new token only when a stable repeated design decision warrants it.
 
-## 3. Implement
+## Verify the actual experience
 
-- Establish semantic structure before visual decoration.
-- Choose components by interaction meaning, not by preferred shape.
-- Use layout, typography, alignment, proximity, and contrast to communicate hierarchy.
-- Use spacing to express relationships, not to manufacture emptiness.
-- Keep persistent UI text only when it adds information, a constraint, a consequence, or necessary guidance.
-- Preserve the project's visual language before introducing new styles or primitives.
-- Make responsive behavior preserve task priority, comparison, actions, navigation, and readable overflow rather than merely shrinking or stacking the desktop layout.
-- Include accessibility semantics and interaction behavior while constructing the UI, not as a later repair.
-- Inspect the rendered result at representative states and widths when the task and available tools permit it.
+Read and apply [Anti-generic UI audit](references/anti-generic-audit.md) for every non-trivial UI task. Each persistent element must serve the task or the product's established identity. If an element is compensating for a structural weakness, repair that weakness before removing the element.
 
-Read [UI semantics and states](references/ui-semantics-and-states.md) when the work includes structured metadata, forms, content, errors, empty or loading states, complex interactions, responsive restructuring, or accessibility-sensitive behavior.
+Inspect the rendered interface at representative states and widths when tools permit. Check whether the intended scanning path and actions are clear without supplementary explanation. Verify that the controls and recovery paths match the actual contract.
 
-For shared UI abstractions, use the `software-evolution` change-axis test. Similar appearance alone does not justify extraction. Repeated ownership of the same product policy or interaction contract may justify a shared owner. Promote tokens only after a stable repeated design decision exists; do not repeat raw values when an established token already owns the decision.
+Verify keyboard use and accessible relationships in the composed interface. Independently accessible components do not establish that the screen as a whole is accessible. Exercise relevant content expansion and overflow behavior.
 
-## 4. Verify
+Run the required repository UI checks for the final relevant state. A later relevant edit invalidates earlier rendered or automated evidence under `software-evolution`.
 
-Verify the completed interface against its actual task and contract:
+## Completion judgment
 
-- The scanning path reveals priority without explanatory prose.
-- Labels and actions identify what they control or do.
-- Structured information remains structured rather than becoming a delimiter-separated string.
-- Components express the correct navigation, action, selection, status, and disclosure semantics.
-- Relevant states are distinct and recoverable.
-- Keyboard order, focus visibility, accessible names, relationships, and announcements are correct.
-- Meaning is not conveyed by color or visual position alone.
-- Long content, localization expansion, narrow widths, and overflow remain usable where relevant.
-- Project-specific design and content conventions remain coherent.
-- Applicable repository UI, accessibility, and interaction tests pass for the final repository state.
+Judge the completed interface by successful task use and contract fidelity. Removing generic styling does not by itself establish either. Confirm that the resulting structure fits the product and remains usable in the relevant states.
 
-After the final relevant change, re-run required verification according to `software-evolution`; do not reuse stale rendered or automated evidence.
-
-## 5. Audit before completion
-
-For every non-trivial UI task, read and apply [Anti-generic UI audit](references/anti-generic-audit.md).
-
-When the audit identifies a disposable text, box, badge, icon, or effect, determine which information-architecture or interaction weakness it was compensating for before deleting it. Repair the underlying structure first.
-
-Report unresolved product assumptions, missing states, unavailable rendered verification, or design-system conflicts explicitly.
+Report unresolved product assumptions and unavailable verification. Do not present an unrendered implementation as a visually verified result.

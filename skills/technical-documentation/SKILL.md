@@ -1,140 +1,76 @@
 ---
 name: technical-documentation
-description: Create, revise, review, or maintain durable technical documentation whose type, audience, temporal perspective, factual evidence, narrative coherence, and prose quality matter. Use for READMEs, reference material, how-to guides, plans, proposals, ADRs, architecture documents, migration guides, release notes, verification records, and Korean technical prose.
+description: Create or maintain durable technical documents with explicit purpose and evidence. Use when the document's temporal perspective and complete narrative affect how readers understand or operate a system.
 ---
 
 # Technical Documentation
 
-Treat documentation as an information system with an explicit purpose, audience, time perspective, and evidence base. Do not write current documentation as a narrative of the edits that produced it.
+## Governing outcome
 
-This skill owns documentation semantics and prose quality. `software-evolution` owns the underlying software facts, contracts, architecture, compatibility boundaries, and verification validity.
+A document must give its intended reader one coherent account of the state it describes. Its meaning must hold without the conversation or diff that produced it.
 
-## Responsibility and precedence
+Current-state documentation describes the actual system directly. When a premise changes, rebuild the complete affected narrative from the accepted model. Remove obsolete assumptions wherever they influence that narrative.
 
-Inspect and preserve repository-specific:
+The document's declared purpose determines its temporal perspective. A plan describes intended work. It does not establish current behavior. Preserve decision history only where history serves the reader's task.
 
-- document authority and placement;
-- established terminology;
-- document templates and status conventions;
-- current-state, plan, history, and verification directories;
-- generated-document sources and validation commands.
+## Responsibility
 
-Repository evidence and terminology take precedence over generic examples in this skill.
+This skill owns document meaning and prose. `software-evolution` owns the underlying software contract and the validity of implementation evidence. Use them together when the document makes software claims.
 
-Use `product-ui` for labels, helper text, errors, empty states, and other interface content. Use this skill when a durable technical document explains the product or system. If the output is a Word or other formatted document artifact, use the relevant document-format skill for layout and rendering in addition to this skill.
+Repository conventions determine document authority and placement. Follow established terminology and maintained templates. Inspect the source of generated documentation before editing its output.
 
-## Scale the procedure
+Use `product-ui` for interface content. Use the relevant format skill when the deliverable needs document rendering or layout verification.
 
-Use a brief internal pass for a local correction whose document type, facts, terminology, and surrounding narrative are already clear.
+## Establish the document model
 
-Use the complete procedure when:
+### Purpose and perspective
 
-- creating a document or substantial section;
-- changing architecture, API, runtime, operational, or contract documentation;
-- writing or revising a plan, ADR, migration guide, release note, or verification record;
-- removing or superseding a design;
-- resolving disagreement between documentation and runtime evidence;
-- changing terminology across a document;
-- rewriting prose reported as historical, repetitive, inflated, translated, or difficult to follow.
+Determine the document type and the reader's task before choosing a structure. Establish which state the document describes and which sources can substantiate it.
 
-Do not produce a long process report for a small edit.
+Read [Document semantics](references/document-semantics.md) for substantial technical documents or when their temporal perspective is unclear. Apply the distinctions for the document at hand rather than copying a generic template.
 
-## 1. Classify
+### Evidence
 
-Before writing, determine:
+Read the whole affected document and its authoritative sources. Inspect nearby documents when their meaning depends on the same contract. For current implementation claims, inspect actual operational paths.
 
-- the document type;
-- the intended reader and their necessary prior knowledge;
-- the temporal perspective;
-- the authoritative sources for its claims;
-- the reader outcome the document must support.
+Keep confirmed facts separate from proposed work. Treat historical decisions as evidence of their own period. A document name or plan identifier does not prove implementation.
 
-Do not begin from the diff or from a generic document template.
+When a claim is uncertain, resolve it from the relevant authority or state the uncertainty. Do not fill gaps with a plausible explanation or treat agreement as corroboration.
 
-Read [Document semantics](references/document-semantics.md) for every non-trivial document that describes current state, future work, decisions, migration, releases, or verification, and whenever the document type or time perspective is unclear.
+### Narrative structure
 
-## 2. Inspect
+Form the complete model the reader needs. Decide which concepts remain valid and where their definitions belong. Derive the affected narrative from that model rather than from the easiest paragraph to patch.
 
-Inspect the breadth required to establish the document's truth model:
+For a current-state reference, every section must make sense without knowing a superseded design. For a plan, distinguish the target from the observed baseline. A request to write a plan does not authorize implementation or a rewrite of current operating instructions as though the plan had shipped.
 
-- applicable repository instructions;
-- the whole affected document and nearby documents;
-- executable code, runtime paths, schemas, and configuration when current implementation is described;
-- plans and proposals when future state is relevant;
-- ADRs or historical records when decision history is relevant;
-- verification evidence and the repository state to which it applies;
-- established project terminology and style references.
+Use a brief internal pass for a small correction whose meaning is established. A substantial change requires reviewing the complete affected narrative, even if only one sentence first revealed the problem.
 
-An artifact, plan, issue, or document name is not by itself implementation evidence.
+## Write from the model
 
-Do not inspect history merely to add history. Use it only when the document type or a real compatibility boundary requires it.
+Organize the document around its subject and the reader's task. Define concepts before relying on them. Keep a consistent temporal perspective within each clearly delimited section.
 
-## 3. Model
+Write the resulting state directly. Use established terminology consistently. State concrete responsibilities and observable behavior. Include rationale only when it helps the reader understand the contract.
 
-Before drafting, separate:
+Remove editing history from current-state explanations. If comparison is necessary for a real transition, identify the source and target states explicitly and use the appropriate historical or migration document.
 
-- verified current facts;
-- approved or proposed future state;
-- historical decisions;
-- migration or compatibility facts;
-- verification evidence;
-- unresolved assumptions;
-- obsolete concepts that the document must not preserve.
+For non-trivial prose, apply [General LLM prose tropes](references/tropes.md). For Korean prose, also apply [Korean technical writing](references/korean.md). Use these to improve meaning and readability rather than as mechanical word bans.
 
-Decide what the reader must know and what would only expose internal editing history.
+## Verify the complete document
 
-For current-state documentation, form a complete model of the current system that does not require knowledge of rejected or superseded designs.
+### Meaning
 
-## 4. Write
+Read the entire affected document after the final edit. Confirm that its structure matches its declared purpose and that later sections use the same model as earlier ones. Check definitions and cross-references against their actual owners.
 
-- Write the resulting state directly.
-- Maintain one temporal perspective within each document or clearly delimited section.
-- Match the structure and voice to the document type.
-- Define concepts before using relative descriptions of them.
-- Preserve stable project terminology.
-- Prefer concrete actors, actions, contracts, conditions, and observable properties.
-- Include history only when it serves the declared document purpose.
-- Remove obsolete terminology and conceptual models from current-state prose.
-- Avoid adding prose that merely narrates the edit.
+Trace implementation claims back to appropriate evidence. Keep plans distinct from implemented behavior. Retain superseded concepts only where the document's historical purpose requires them.
 
-## 5. Audit semantics and time
+### Prose
 
-Confirm:
+Check that each paragraph adds a necessary fact or decision. Consolidate repetition at its owner. Prefer a general rule when several examples express the same cause. Use a list only when the reader needs to distinguish its members.
 
-- current state, plan, history, migration, release information, and verification evidence are not conflated;
-- every implementation claim has evidence appropriate to the repository;
-- current-state prose does not require knowledge of superseded designs;
-- relative terms such as “previous”, “new”, or “now” have a necessary and explicit reference point;
-- a plan or artifact is not represented as implemented behavior;
-- migration language corresponds to an actual source state, target state, and compatibility boundary;
-- superseded concepts remain only in documents whose purpose is historical;
-- the document does not accumulate change history in place of a current model.
+Correct semantic contradictions before polishing style. The completed narrative must be understandable without reading the editing history.
 
-Correct semantic and temporal defects before polishing style.
+### Mechanical evidence
 
-## 6. Audit prose
+Run the applicable document checks after the final relevant change. When documentation is generated, verify its source and regenerated output together. Follow `software-evolution` for verification validity.
 
-For non-trivial prose, read and apply [General LLM prose tropes](references/tropes.md).
-
-For Korean prose, also read and apply [Korean technical writing](references/korean.md).
-
-Treat these references as review criteria, not mechanical word bans. Preserve technically necessary terms and constructions.
-
-## 7. Audit the complete narrative
-
-Read the complete affected document after the final edit, not only the changed lines.
-
-Check:
-
-- headings still describe their sections;
-- definitions and terminology remain consistent;
-- later sections do not preserve superseded assumptions;
-- adjacent sections do not contradict the new model;
-- the same claim is not repeated without a distinct reader need;
-- reference, procedure, explanation, decision history, and release narrative remain properly separated;
-- links and cross-references still point to the correct authority;
-- the document can be understood without reading the git diff or the conversation that produced it.
-
-Run applicable documentation generation, link, schema, formatting, or repository checks after the final relevant change. Apply `software-evolution` verification-validity rules and do not use stale results.
-
-Report unresolved facts, unavailable evidence, and deliberate historical context explicitly.
+Structural validation establishes document structure. It does not establish factual accuracy or reader comprehension. Report missing evidence and unresolved claims as limitations.

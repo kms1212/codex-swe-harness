@@ -110,12 +110,14 @@ declare -a EXPECTED_TARGETS=(
   "$SKILLS_DIR/software-evolution"
   "$SKILLS_DIR/product-ui"
   "$SKILLS_DIR/technical-documentation"
+  "$SKILLS_DIR/git-workflow"
 )
 declare -a EXPECTED_SOURCES=(
   "$REPOSITORY_ROOT/global/AGENTS.md"
   "$REPOSITORY_ROOT/skills/software-evolution"
   "$REPOSITORY_ROOT/skills/product-ui"
   "$REPOSITORY_ROOT/skills/technical-documentation"
+  "$REPOSITORY_ROOT/skills/git-workflow"
 )
 
 declare -a MANIFEST_TARGETS=()
@@ -160,7 +162,10 @@ read_manifest() {
 
   ((header_seen == 1)) || die "empty manifest: $path"
   [[ -n "$MANIFEST_REPOSITORY" ]] || die "manifest has no repository record: $path"
-  ((${#MANIFEST_TARGETS[@]} == 4)) || die "manifest must contain exactly four managed links: $path"
+  local link_count="${#MANIFEST_TARGETS[@]}"
+  ((link_count == 4 || link_count == ${#EXPECTED_TARGETS[@]})) || {
+    die "manifest must contain four legacy links or ${#EXPECTED_TARGETS[@]} current links: $path"
+  }
 }
 
 validate_expected_sources() {
@@ -173,7 +178,7 @@ validate_expected_sources() {
 
 validate_manifest_targets() {
   local index
-  for index in "${!EXPECTED_TARGETS[@]}"; do
+  for index in "${!MANIFEST_TARGETS[@]}"; do
     [[ "${MANIFEST_TARGETS[$index]}" == "${EXPECTED_TARGETS[$index]}" ]] || {
       die "managed target layout differs from the requested paths; uninstall with the original paths before relocating"
     }
@@ -187,10 +192,21 @@ validate_manifest_sources() {
     "$MANIFEST_REPOSITORY/skills/software-evolution"
     "$MANIFEST_REPOSITORY/skills/product-ui"
     "$MANIFEST_REPOSITORY/skills/technical-documentation"
+    "$MANIFEST_REPOSITORY/skills/git-workflow"
   )
   local index
-  for index in "${!expected_manifest_sources[@]}"; do
+  for index in "${!MANIFEST_SOURCES[@]}"; do
     [[ "${MANIFEST_SOURCES[$index]}" == "${expected_manifest_sources[$index]}" ]] || die "manifest source layout is invalid"
+  done
+}
+
+preflight_new_managed_targets() {
+  local index target
+  for ((index=${#MANIFEST_TARGETS[@]}; index < ${#EXPECTED_TARGETS[@]}; index++)); do
+    target="${EXPECTED_TARGETS[$index]}"
+    if path_exists_or_link "$target"; then
+      die "new managed target already exists and is not owned by this installer: $target"
+    fi
   done
 }
 
@@ -319,6 +335,7 @@ install_or_update() {
     validate_manifest_targets
     validate_manifest_sources
     preflight_owned_targets
+    preflight_new_managed_targets
     existing_manifest=1
     operation="managed installation update"
   else
@@ -378,7 +395,7 @@ install_or_update() {
     fi
     previous_present=0
     old_source=""
-    if ((existing_manifest == 1)) && is_exact_link "$target" "${MANIFEST_SOURCES[$index]}"; then
+    if ((existing_manifest == 1 && index < ${#MANIFEST_SOURCES[@]})) && is_exact_link "$target" "${MANIFEST_SOURCES[$index]}"; then
       previous_present=1
       old_source="${MANIFEST_SOURCES[$index]}"
       rm -f "$target"
@@ -399,6 +416,9 @@ check_installation() {
   read_manifest "$MANIFEST_PATH"
   validate_manifest_targets
   validate_manifest_sources
+  ((${#MANIFEST_TARGETS[@]} == ${#EXPECTED_TARGETS[@]})) || {
+    die "managed installation is outdated; run the installer to add the missing managed links"
+  }
   local index target source failures=0
   for index in "${!MANIFEST_TARGETS[@]}"; do
     target="${MANIFEST_TARGETS[$index]}"

@@ -1,82 +1,49 @@
-# Anti-generic UI Audit
+# Product-specific UI Audit
 
-Apply this audit before completing a non-trivial product UI task. Its purpose is not to detect a particular visual style. It tests whether every element is justified by the product's task, information structure, interaction contract, or visual identity.
+Apply this audit before completing a non-trivial product UI task. It tests whether the interface is justified by the product's actual task. It is a design review, not a claim about the statistical frequency or training origin of visual patterns.
 
-## Element-purpose audit
+## Task and hierarchy
 
-For each persistent element or repeated treatment, ask:
+Identify the primary decision the user must make. Follow the actual scanning path and check whether the information needed for that decision is apparent.
 
-1. Which user problem does it solve?
-2. What information, relationship, or affordance would be lost if it were removed?
-3. Does its text add information, or repeat what the surrounding UI already communicates?
-4. Is the container, card, badge, or pill a real semantic or interaction group?
-5. Is punctuation substituting for layout or structured markup?
-6. Is there a product-specific reason for the visual treatment?
-7. Does the hierarchy support the actual scanning path?
-8. Does the component carry the correct interaction semantics?
-9. Does the accessibility tree express the same important relationships?
-10. Does the interface expose the data and decision directly, or explain them through avoidable prose?
+When text or nested containers explain a relationship that the layout should communicate, repair the hierarchy. Deleting the explanation alone does not establish a usable interface.
 
-If removal loses nothing, remove the element after correcting any hierarchy or grouping weakness it was masking.
+Choose density from the work. A sparse layout can hide comparisons just as a crowded layout can obscure priority. Neither density is a universal default.
 
-## Statistical-default audit
+## Element purpose
 
-Require a concrete product, semantic, or interaction reason before retaining:
+For each persistent element, identify what the user would lose if it were absent. Retain it when that loss matters to the task or the established product identity. Remove it when no useful function remains.
 
-- a subtitle under every heading;
-- repeated helper text or info icons;
-- long `·`, `|`, `/`, or dash-separated metadata chains;
-- rounded cards around every section;
-- pills or badges for ordinary values;
-- icons beside every heading or label;
-- icon-only actions where text is clearer;
-- top-of-page three- or four-card KPI grids;
-- generic dashboard templates reused across unrelated tasks;
-- decorative gradients, glass effects, glow, shadows, or floating shapes;
-- excessive rounded rectangles;
-- generic stock illustration or meaningless sparklines;
-- oversized empty states;
-- uniformly low-density layouts;
-- generic SaaS marketing copy in operational screens.
+Text should contribute information. A subtitle that repeats its heading does not clarify the task. Repeated help treatment can indicate that a control or group needs redesign.
 
-These patterns are not prohibited. “Modern”, “clean”, or “common in dashboards” is not sufficient justification.
+A container should express a meaningful group. A badge should communicate a real status or another established product meaning. An icon should aid recognition rather than decorate every label. Require the same justification for a repeated page template as for an individual component.
 
-## Structure and contract audit
+Visual effects can serve the product's identity. Their popularity or a generic claim of modernity does not establish that purpose. Do not impose a blanket ban on a treatment that has a concrete role in this product.
 
-Check for:
+## Semantic structure
 
-- hierarchy compensated for by explanatory prose or nested boxes;
-- real lists, tables, groups, and label/value relationships implemented as strings or generic containers;
-- forms ordered by schema or DTO rather than user task;
-- placeholder text acting as a label;
-- validation and system failures sharing the wrong treatment;
-- first-use, filtered-empty, permission, and failure states collapsed into one generic empty state;
-- loading, error, partial, read-only, permission, overflow, focus, or narrow-width states missing from a contract that can produce them;
-- inaccessible names, focus order, grouping, status cues, or dynamic announcements;
-- responsive behavior that only shrinks or blindly stacks;
-- project design-system components or tokens ignored without a semantic reason.
+Check that the interface preserves the relationships in its data. Comparable records need a comparison structure. Different attributes must not become a punctuation-separated string that erases their roles.
 
-## Abstraction audit
+Forms should follow the user's task rather than implementation field order. Controls need visible labels and correct interaction semantics. Essential guidance must remain available while the user acts.
 
-Apply the `software-evolution` ownership and change-axis criteria:
+Different causes need different recovery behavior when the contract requires it. An absent record and a failed request must not share a misleading empty state. Apply [UI semantics and states](ui-semantics-and-states.md) to verify the actual state model.
 
-- Do not extract components solely because two regions look alike.
-- Look for product policy or interaction behavior that must change together.
-- Do not force new semantics through an implementation-coupled component API.
-- Improve the owning component when multiple consumers are compensating for the same limitation.
-- Do not introduce variants or tokens for one speculative use.
-- Do not repeat raw decisions already owned by stable project tokens or primitives.
+## Composed behavior
 
-## Completion condition
+Verify that the accessibility tree communicates the same important relationships as the visual layout. Follow keyboard navigation through the complete task and check that focus remains meaningful after state changes.
 
-The interface is ready only when:
+At narrow widths, preserve the user's decision and access to its actions. Check relevant overflow and content expansion. A layout that only shrinks or stacks has not yet demonstrated that the task remains usable.
 
-- its primary task and scanning path are evident;
-- visual and semantic structures agree;
-- necessary information is present without redundant commentary;
-- components and states match their contracts;
-- project-specific design language is preserved;
-- relevant accessibility and responsive behavior have been verified;
-- remaining assumptions and unverified states are reported.
+Use the project's established components and tokens when their contracts fit. Do not replace them merely to produce a different style.
 
-When a symptom is found, repair the underlying information structure, interaction, or owning abstraction. Do not treat deleting a decorative artifact as sufficient if the screen remains unclear.
+## Ownership
+
+Apply the `software-evolution` change-axis test. Shared product policy can justify a shared component. Similar appearance alone cannot.
+
+When consumers repeatedly compensate for one component's limitation, inspect the owning contract. Avoid accumulating variants around an owner that can be corrected. Do not introduce a new abstraction for speculative future use.
+
+## Completion judgment
+
+The primary task must be evident and achievable in the relevant states. Necessary information must remain accessible without redundant commentary. The result must preserve the product's design language and interaction contract.
+
+Report missing evidence and unresolved assumptions. Removing familiar visual patterns is not a substitute for verifying the completed experience.

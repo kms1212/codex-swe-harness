@@ -1,17 +1,26 @@
 # Codex SWE Harness
 
-A user-global software engineering harness for Codex. It combines a small global routing policy with three focused skills for long-term software evolution, product UI work, and technical documentation.
+A user-global software engineering harness for Codex. Governing principles define the required result. Domain skills derive the decisions needed to produce it. Procedures and checks provide evidence that the completed work meets that result.
 
 ## Contents
 
 | Path | Responsibility |
 | --- | --- |
-| `global/AGENTS.md` | Global working rules, governance, permissions, skill routing, and completion discipline |
-| `skills/software-evolution/` | Root-cause ownership, change boundaries, compatibility, migrations, verification, and repository harnesses |
-| `skills/product-ui/` | Task-oriented information architecture, interaction semantics, accessibility, UI states, and anti-generic review |
-| `skills/technical-documentation/` | Document types, temporal correctness, evidence semantics, narrative maintenance, and Korean technical writing |
+| `global/AGENTS.md` | Governing outcomes and authorization for all work |
+| `skills/software-evolution/` | Coherent software ownership across the known change horizon |
+| `skills/git-workflow/` | Authorized Git operations that preserve user state |
+| `skills/product-ui/` | Interfaces derived from the user's task and product contract |
+| `skills/technical-documentation/` | Coherent technical narratives grounded in the state they describe |
 
-`software-evolution` owns cross-domain change-boundary decisions. Relevant domain skills supply evidence, constraints, semantics, and techniques that inform those decisions before they are finalized; they do not replace its ownership.
+## Rule hierarchy
+
+The governing principles require reconstructing the complete affected result from accepted premises. Evidence determines factual conclusions. Completion depends on the requested outcome rather than a convenient success signal.
+
+`software-evolution` determines the software change boundary. Specialized skills contribute domain constraints before that boundary is finalized. Repository guidance supplies project-specific authority and executable requirements. A completed procedure cannot excuse a result that violates its governing outcome.
+
+When a premise changes, reconstruct every dependent part as though the accepted premise had governed the work from the beginning. Necessary scope follows that dependency model rather than the smallest diff. Confirmed requirements and user state remain preservation obligations.
+
+[Instruction design and evidence](docs/instruction-design.md) separates research findings from local observations and explains the resulting risk controls. The hierarchy is a design decision; it is not proof of behavioral compliance.
 
 ## Requirements
 
@@ -40,6 +49,7 @@ Installation creates symbolic links from the Codex user paths to this checkout:
 | --- | --- |
 | `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`) | `global/AGENTS.md` |
 | `~/.agents/skills/software-evolution` | `skills/software-evolution/` |
+| `~/.agents/skills/git-workflow` | `skills/git-workflow/` |
 | `~/.agents/skills/product-ui` | `skills/product-ui/` |
 | `~/.agents/skills/technical-documentation` | `skills/technical-documentation/` |
 
@@ -100,11 +110,14 @@ Codex installations that include the bundled skill validator can validate each s
 
 ```sh
 python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/software-evolution
+python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/git-workflow
 python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/product-ui
 python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/technical-documentation
 ```
 
-Validation checks skill structure and frontmatter. It does not replace review of instruction ownership, reference routing, or behavioral quality.
+Validation checks skill structure and frontmatter. The installer suite checks installation behavior. Neither establishes that an agent follows the instructions during real work.
+
+Behavioral validation must inspect the agent's first substantive response and the resulting artifacts across a complete task. Use the evaluation boundaries in [Instruction design and evidence](docs/instruction-design.md), including cases that require reconstruction without discarding valid requirements or exceeding authorization. Installation and structural checks do not establish this broader outcome.
 
 ## License
 

@@ -52,6 +52,25 @@ run_checkout_installer() {
     --skills-dir "$home_dir/.agents/skills" "$@"
 }
 
+seed_legacy_install() {
+  local home_dir="$1"
+  local repository="$2"
+  local state_dir="$home_dir/.codex/.codex-swe-harness"
+  mkdir -p "$home_dir/.agents/skills" "$state_dir"
+  ln -s "$repository/global/AGENTS.md" "$home_dir/.codex/AGENTS.md"
+  ln -s "$repository/skills/software-evolution" "$home_dir/.agents/skills/software-evolution"
+  ln -s "$repository/skills/product-ui" "$home_dir/.agents/skills/product-ui"
+  ln -s "$repository/skills/technical-documentation" "$home_dir/.agents/skills/technical-documentation"
+  {
+    printf 'codex-swe-harness-manifest\t1\n'
+    printf 'repository\t%s\n' "$repository"
+    printf 'link\t%s\t%s\n' "$home_dir/.codex/AGENTS.md" "$repository/global/AGENTS.md"
+    printf 'link\t%s\t%s\n' "$home_dir/.agents/skills/software-evolution" "$repository/skills/software-evolution"
+    printf 'link\t%s\t%s\n' "$home_dir/.agents/skills/product-ui" "$repository/skills/product-ui"
+    printf 'link\t%s\t%s\n' "$home_dir/.agents/skills/technical-documentation" "$repository/skills/technical-documentation"
+  } > "$state_dir/manifest.tsv"
+}
+
 home_dir="$(new_environment dry-run)"
 run_installer "$home_dir" --dry-run >/dev/null
 [[ ! -e "$home_dir/.codex" ]] || fail "dry-run created Codex home"
@@ -69,11 +88,38 @@ home_dir="$(new_environment fresh)"
 run_installer "$home_dir" --yes >/dev/null
 assert_link "$home_dir/.codex/AGENTS.md" "$REPOSITORY_ROOT/global/AGENTS.md"
 assert_link "$home_dir/.agents/skills/software-evolution" "$REPOSITORY_ROOT/skills/software-evolution"
+assert_link "$home_dir/.agents/skills/git-workflow" "$REPOSITORY_ROOT/skills/git-workflow"
 assert_link "$home_dir/.agents/skills/product-ui" "$REPOSITORY_ROOT/skills/product-ui"
 assert_link "$home_dir/.agents/skills/technical-documentation" "$REPOSITORY_ROOT/skills/technical-documentation"
 run_installer "$home_dir" --check >/dev/null
 run_installer "$home_dir" --yes | grep -q 'already current' || fail "repeat install was not idempotent"
 pass "fresh install links every source and repeat install is idempotent"
+
+home_dir="$(new_environment legacy-upgrade)"
+seed_legacy_install "$home_dir" "$REPOSITORY_ROOT"
+if run_installer "$home_dir" --check >/dev/null 2>&1; then
+  fail "legacy installation unexpectedly passed current-layout verification"
+fi
+run_installer "$home_dir" --yes >/dev/null
+assert_link "$home_dir/.agents/skills/git-workflow" "$REPOSITORY_ROOT/skills/git-workflow"
+run_installer "$home_dir" --check >/dev/null
+link_count="$(grep -c $'^link\t' "$home_dir/.codex/.codex-swe-harness/manifest.tsv")"
+[[ "$link_count" == "5" ]] || fail "legacy update did not write the five-link manifest"
+backup_count="$(find "$home_dir/.codex/.codex-swe-harness/backups" -name manifest.tsv -type f | wc -l | tr -d ' ')"
+[[ "$backup_count" == "1" ]] || fail "legacy update did not preserve one recovery manifest"
+pass "legacy four-link installation upgrades to the current layout"
+
+home_dir="$(new_environment legacy-collision)"
+seed_legacy_install "$home_dir" "$REPOSITORY_ROOT"
+mkdir -p "$home_dir/.agents/skills/git-workflow"
+printf 'user owned\n' > "$home_dir/.agents/skills/git-workflow/keep.txt"
+if run_installer "$home_dir" --yes >/dev/null 2>&1; then
+  fail "legacy update overwrote an unmanaged git-workflow target"
+fi
+[[ -f "$home_dir/.agents/skills/git-workflow/keep.txt" ]] || fail "legacy collision changed user content"
+link_count="$(grep -c $'^link\t' "$home_dir/.codex/.codex-swe-harness/manifest.tsv")"
+[[ "$link_count" == "4" ]] || fail "legacy collision rewrote the manifest"
+pass "legacy update refuses an occupied new target before mutation"
 
 home_dir="$(new_environment moved-checkout)"
 checkout_a="$TEST_ROOT/moved-checkout/checkout-a"
@@ -87,6 +133,7 @@ done
 run_checkout_installer "$checkout_a" "$home_dir" --yes >/dev/null
 run_checkout_installer "$checkout_b" "$home_dir" --yes >/dev/null
 assert_link "$home_dir/.codex/AGENTS.md" "$checkout_b/global/AGENTS.md"
+assert_link "$home_dir/.agents/skills/git-workflow" "$checkout_b/skills/git-workflow"
 assert_link "$home_dir/.agents/skills/product-ui" "$checkout_b/skills/product-ui"
 backup_count="$(find "$home_dir/.codex/.codex-swe-harness/backups" -name manifest.tsv -type f | wc -l | tr -d ' ')"
 [[ "$backup_count" == "1" ]] || fail "checkout move did not create one recovery backup"
