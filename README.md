@@ -7,13 +7,14 @@ A user-global software engineering harness for Codex. Governing principles defin
 | Path | Responsibility |
 | --- | --- |
 | `global/AGENTS.md` | Governing outcomes, operational authority, and epistemic claim control |
-| `skills/software-evolution/` | Coherent software ownership across the known change horizon |
+| `skills/software-evolution/` | Coherent ownership, change locality, and architecture health across the known change horizon |
 | `skills/git-workflow/` | Authorized Git operations that preserve user state |
 | `skills/thread-coordination/` | Authorized cross-task communication, return paths, and ownership semantics |
 | `skills/product-ui/` | Interfaces derived from the user's task and product contract |
 | `skills/technical-documentation/` | Coherent technical narratives grounded in the state they describe |
 | `evals/task-control.md` | Behavioral regression cases for authority, steering, epistemic revision, and completion |
 | `evals/thread-coordination.md` | Behavioral regression cases for dispatch, response routing, claim propagation, and result consumption |
+| `evals/architecture-drift.md` | Longitudinal regression cases for pattern amplification and architecture promotion |
 
 ## Rule hierarchy
 
@@ -122,7 +123,7 @@ python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_v
 
 Validation checks skill structure and frontmatter. The installer suite checks installation behavior. Neither establishes that an agent follows the instructions during real work.
 
-Behavioral validation must inspect the agent's first substantive response, consequential actions, conclusion revisions, and resulting artifacts across a complete task. Use the evaluation boundaries in [Instruction design and evidence](docs/instruction-design.md), [Task-control regression evaluation](evals/task-control.md), and [Thread-coordination regression evaluation](evals/thread-coordination.md). These cover reconstruction, authority, steering, epistemic updates, uncertainty, external effects, dispatch, return paths, claim propagation, result consumption, abstraction, and transfer to a new action surface. Installation, structural checks, policy recitation, apology, and agreement wording do not establish this broader outcome.
+Behavioral validation must inspect the agent's first substantive response, consequential actions, conclusion revisions, and resulting artifacts across complete tasks and longitudinal task sequences. Use the evaluation boundaries in [Instruction design and evidence](docs/instruction-design.md), [Task-control regression evaluation](evals/task-control.md), [Thread-coordination regression evaluation](evals/thread-coordination.md), and [Architecture-drift regression evaluation](evals/architecture-drift.md). These cover reconstruction, authority, steering, epistemic updates, uncertainty, external effects, dispatch, return paths, claim propagation, result consumption, pattern amplification, architecture promotion, abstraction, and transfer to a new action surface. Installation, structural checks, policy recitation, apology, and agreement wording do not establish this broader outcome.
 
 ## License
 

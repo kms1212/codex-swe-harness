@@ -46,6 +46,16 @@ Coordination also preserves epistemic roles. Verified facts, attributed observat
 
 Recurring incidents are classified before instructions are changed. A policy gap may justify a minimal new invariant. An applicability failure calls for better routing, a decision procedure, or a boundary example. A pure execution failure calls for regression evidence or an external control where available, not another paraphrase of the same rule.
 
+## Architecture intent and longitudinal health
+
+Executable behavior is authoritative evidence of current implementation. It can establish real consumers and compatibility obligations, but it does not by itself establish architectural intent or approval to expand the same pattern. Intent comes from a separate owner such as a current repository rule, approved design, authoritative contract, enforced invariant, user decision, or evidenced compatibility boundary.
+
+Local correctness and longitudinal architecture health are different judgments. A sequence of individually successful tasks can increase duplicated policy, generated churn, compatibility layers, hidden build dependencies, ambiguous sources of truth, and repeated cross-package edits. Repetition can reflect a stable abstraction or repeated copying of an accidental precedent.
+
+The software-evolution skill therefore distinguishes local reuse, pattern extension, and pattern promotion. A short architecture-health reassessment occurs only when the pattern crosses a boundary, gains consumers, increases change fanout, or becomes source-of-truth, build, CI, release, persistent-state, or compatibility infrastructure. Existing architecture evidence can discharge the check without reopening the decision.
+
+Drift evidence changes the current implementation only when the proposed amplification or accumulated pattern is inside the task's minimal causal closure. Otherwise the task avoids new amplification where possible, preserves real dependencies, and records separate architecture work. Detection is not cleanup authority.
+
 ## Evidence standard
 
 Public studies identify failure risks in their tested models and tasks. They do not establish the failure rate or internal disposition of the model running a particular Codex task. Local observations refer to the supplied task records and the harness-revision discussion, not a universal model trait.
@@ -122,6 +132,8 @@ The user supplied twelve numbered observations with a separate warning that some
 | Cross-thread results lost, unread, or mistaken for completion | Verify a return path before dispatch and track delivery, consumption, integration, and ownership separately | Thread Coordination and its regression evaluation |
 | Technical conclusions reversed after unsupported user challenge | Separate task authority from epistemic authority and admit claim revisions only through evidence, reasoning correction, applicable steering, or recognition of unsupported prior claims | Global epistemic state and task-control regression evaluation |
 | Claim type lost across task boundaries | Preserve evidence provenance and distinguish fact, inference, requirement, decision, preference, and unknown in coordination messages | Thread Coordination and its regression evaluation |
+| Repeated local success amplifies an accidental pattern into architecture | Separate current-state evidence from intent and reassess material pattern extension or promotion at its owner | Software Evolution architecture-drift reference and longitudinal regression evaluation |
+| Growing change and verification fanout | Use churn and widening affected paths as proportional evidence of lost change locality rather than automatic proof or automatic cleanup authority | Software Evolution execution and architecture-drift references |
 
 These are risk controls rather than assertions that every model always exhibits every behavior. The user reports warrant addressing the risks in this harness. They do not support claims about the training-data origin of UI patterns or the model's internal memory architecture.
 
@@ -151,4 +163,8 @@ The task-control cases in [Task-control regression evaluation](../evals/task-con
 
 The [thread-coordination cases](../evals/thread-coordination.md) exercise dispatch, return-path selection, blocker propagation, result consumption, wait justification, and ownership transfer. They likewise evaluate observed trajectories rather than establishing authority or replacing active tool contracts.
 
+The [architecture-drift cases](../evals/architecture-drift.md) exercise multi-task amplification rather than one final snapshot. They evaluate whether an agent notices architectural significance before further propagation without prescribing a universal generated-artifact, compatibility, or policy-centralization decision.
+
 These text instructions cannot establish deterministic resistance to sycophancy or perfect instruction following. Semantic labels can themselves be applied incorrectly. Only held-out trajectories that inspect evidence use, conclusion revision, uncertainty, and consequential actions provide behavioral evidence, and that evidence remains scoped to the recorded harness, model, tools, and execution conditions.
+
+Longitudinal drift detection has an additional evidence limit. Task context may omit earlier decisions, Git history may be unavailable or compressed, and churn does not reveal intent by itself. The reassessment can expose missing authority and growing cost, but it cannot reconstruct undocumented project history with certainty.

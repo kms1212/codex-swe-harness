@@ -8,6 +8,8 @@ Inspect the owning implementation and follow the dependency paths that can inval
 
 Include the actual build and deployment paths when they affect the changed behavior. Identify the tests and current documents that describe its contract. This investigation does not require changing every layer on every task.
 
+When a change expands an existing pattern, inspect source-of-truth and dependency direction where relevant. Differences between a clean or standalone path and a path that succeeds only with existing generated, cached, or tracked state can reveal a hidden dependency.
+
 Inspection and verification may extend beyond the implementation boundary to detect regressions and contract effects. Tracing a path or observing a pre-existing defect does not authorize modifying every inspected component.
 
 ## Implement the accepted design
@@ -37,6 +39,8 @@ A failing gate requires diagnosis. Determine whether the failure was caused by t
 Prefer a minimal reproduction or affected suffix when it can resolve the current uncertainty. Reuse a validated prefix when its prerequisites and contract remain independent of the failure and subsequent change.
 
 Repeated same-class failure or modification-and-reversal churn is evidence that the hypothesis, shared contract, state ownership, change boundary, fixture, or test strategy may be wrong. Review that strategy before accumulating another local patch. Do not change direction merely because work is lengthy; base the review on the observed failure and evidence history.
+
+Growing edit fanout, generated churn, repeated same-policy changes, widening package impact, and verification scope that grows with pattern instances can indicate loss of change locality. When these signals accompany pattern extension or promotion, apply the [architecture drift reassessment](architecture-drift.md) before adding more instances. These signals motivate investigation; they do not prove the architecture is wrong.
 
 Do not conceal failure or weaken the meaning of a gate. A change to test execution needs evidence that it repairs the verification conditions rather than hides a product defect.
 

@@ -19,9 +19,13 @@ Preserved requirements constrain the design. Verification supplies evidence that
 
 Use authoritative requirements to establish the target and the known change horizon. Use executable behavior to establish current implementation. A confirmed plan constrains the current design but does not prove that future behavior has been implemented or authorize implementing it now.
 
+Existing implementation proves current state and may establish real consumer dependencies. It does not by itself prove architectural intent, quality, or authority to propagate a pattern. Treat agent-generated precedent the same way: inspect it as implementation evidence, and require separate authority before materially amplifying it.
+
 When competing causes would require different fixes, inspect a case that distinguishes them. The first failing line and existing file boundaries do not establish the cause's owner. A repeated failure calls for investigating the common cause.
 
 Follow the contract from its actual entry point through the owning responsibility and every affected consumer. Establish what state must survive and what evidence could show that the design fails its current contract.
+
+Distinguish local reuse within an established contract from pattern extension across consumers or boundaries and from promotion into a source of truth, stable interface, persistent state, build input, or delivery gate. Extension and promotion can increase architectural significance even when each new instance is locally correct.
 
 Current scope admits confirmed work, required root-cause dependencies, and induced consequences whose omission would break the confirmed result. User steering can admit independent adjacent work. Known future work and opportunistic cleanup remain outside the current scope; future requirements constrain choices inside it without entering it.
 
@@ -36,6 +40,8 @@ If delivery must be incremental, make each step converge on the target structure
 This skill owns the software change boundary and the validity of verification evidence. Domain skills supply the constraints needed to choose that boundary. Repository guidance establishes local authority and executable requirements. Use `git-workflow` for Git operations.
 
 When the task requires concrete implementation or verification decisions, read [Change execution and verification](references/change-verification.md). It governs dependency tracing through runtime paths and keeps final-state checks meaningful.
+
+Read [Architecture drift](references/architecture-drift.md) when a change materially amplifies an existing pattern, crosses a subsystem boundary, promotes the pattern into build or delivery infrastructure, or shows growing edit and verification fanout. The reference defines an event-driven reassessment; it does not authorize repository-wide cleanup.
 
 Before deciding the content or placement of repository guidance, read [Repository harness](references/repository-harness.md). Create such guidance only when inspected local facts need a durable owner. Follow the global approval requirement for `AGENTS.md` changes.
 
