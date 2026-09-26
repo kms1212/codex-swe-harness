@@ -2,7 +2,7 @@
 
 Use this procedure to establish durable engineering guidance in a repository that has no adequate `AGENTS.md` or mechanical engineering checks.
 
-Do not create repository guidance merely because it is absent. Create it when verified repository-specific knowledge or recurring decisions need a durable owner.
+Repository guidance is admissible when verified repository-specific knowledge or recurring decisions need a durable owner.
 
 ## 1. Establish scope
 
@@ -14,7 +14,7 @@ Determine:
 - whether the request is to propose, create, normalize, or extend repository guidance;
 - which teams, packages, or execution environments the guidance will affect.
 
-A request for repository guidance authorizes investigation and a proposal. It does not authorize an unshown `AGENTS.md` write.
+A request for repository guidance authorizes investigation and a proposal. An `AGENTS.md` write becomes admissible after the exact path and proposal are shown and explicitly approved.
 
 ## 2. Gather authoritative evidence
 
@@ -42,7 +42,7 @@ Distinguish:
 
 ## 3. Classify each candidate rule
 
-Place a rule in repository guidance only when it is repository-specific, durable, actionable, and not better enforced mechanically.
+Place a rule in repository guidance when it is repository-specific, durable, actionable, recurring, and not better enforced mechanically.
 
 Typical repository guidance includes:
 

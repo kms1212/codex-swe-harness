@@ -17,9 +17,9 @@ Research was checked on 2026-09-21 against project-owned documentation and repos
 
 ## Resulting boundary
 
-The checkout is the content owner. Installation creates five absolute symlinks and a small ownership manifest under `CODEX_HOME/.codex-swe-harness/`. The manifest contains paths only; it does not copy instruction or skill content.
+The checkout is the content owner. Installation creates six absolute symlinks and a small ownership manifest under `CODEX_HOME/.codex-swe-harness/`. The manifest contains paths only; it does not copy instruction or skill content.
 
-Manifests from the earlier four-link layout remain valid update inputs. The installer verifies those four owned links, refuses an occupied `git-workflow` target, backs up the old manifest, adds the fifth link, and writes the current layout. Check mode requires the current five-link layout, while uninstall and restore continue to honor either recorded layout so recovery remains exact.
+Manifests from the earlier four-link and five-link layouts remain valid update inputs. The installer verifies the recorded owned links, refuses an occupied newly managed target, backs up the old manifest, adds the missing links in order, and writes the current six-link layout. Check mode requires the current layout, while uninstall and restore continue to honor all recorded layouts so recovery remains exact.
 
 A missing manifest means a new installation. Any occupied target is then an unmanaged collision and stops the operation during preflight. A valid manifest means an update. Updates may repair missing managed links or repoint links after the repository moves, but they stop if a managed target was replaced outside the installer.
 

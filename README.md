@@ -9,8 +9,11 @@ A user-global software engineering harness for Codex. Governing principles defin
 | `global/AGENTS.md` | Governing outcomes and authorization for all work |
 | `skills/software-evolution/` | Coherent software ownership across the known change horizon |
 | `skills/git-workflow/` | Authorized Git operations that preserve user state |
+| `skills/thread-coordination/` | Authorized cross-task communication, return paths, and ownership semantics |
 | `skills/product-ui/` | Interfaces derived from the user's task and product contract |
 | `skills/technical-documentation/` | Coherent technical narratives grounded in the state they describe |
+| `evals/task-control.md` | Behavioral regression cases for task authority, steering, and completion |
+| `evals/thread-coordination.md` | Behavioral regression cases for dispatch, response routing, and result consumption |
 
 ## Rule hierarchy
 
@@ -52,6 +55,7 @@ Installation creates symbolic links from the Codex user paths to this checkout:
 | `~/.agents/skills/git-workflow` | `skills/git-workflow/` |
 | `~/.agents/skills/product-ui` | `skills/product-ui/` |
 | `~/.agents/skills/technical-documentation` | `skills/technical-documentation/` |
+| `~/.agents/skills/thread-coordination` | `skills/thread-coordination/` |
 
 The source files in this repository remain the only content copies. Pulling an update into the same checkout updates the installed harness immediately. Running the installer again verifies the managed installation; if the checkout moved, it repoints links after checking ownership and creates a recovery backup.
 
@@ -113,11 +117,12 @@ python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_v
 python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/git-workflow
 python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/product-ui
 python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/technical-documentation
+python "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/thread-coordination
 ```
 
 Validation checks skill structure and frontmatter. The installer suite checks installation behavior. Neither establishes that an agent follows the instructions during real work.
 
-Behavioral validation must inspect the agent's first substantive response and the resulting artifacts across a complete task. Use the evaluation boundaries in [Instruction design and evidence](docs/instruction-design.md), including cases that require reconstruction without discarding valid requirements or exceeding authorization. Installation and structural checks do not establish this broader outcome.
+Behavioral validation must inspect the agent's first substantive response, consequential actions, and resulting artifacts across a complete task. Use the evaluation boundaries in [Instruction design and evidence](docs/instruction-design.md), [Task-control regression evaluation](evals/task-control.md), and [Thread-coordination regression evaluation](evals/thread-coordination.md). These cover reconstruction, authority, steering, external effects, dispatch, return paths, result consumption, abstraction, and transfer to a new action surface. Installation, structural checks, and policy recitation do not establish this broader outcome.
 
 ## License
 

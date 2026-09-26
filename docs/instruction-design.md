@@ -18,6 +18,26 @@ Codex discovers skill metadata before deciding whether to read the complete skil
 
 Instruction discovery and interpretation are distinct checks. Codex's documented instruction-chain discovery supplies standing context; it does not establish correct use of that context in a response. Inspect the instruction source and then evaluate the first substantive result independently. [Official instruction documentation](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
 
+## Task control
+
+The task model is an execution-control state. For non-trivial work it records the current mode, admitted scope, authority by effect class, preservation requirements, exclusions, completion condition, approval and stop boundaries, and unresolved blockers. These fields come from the semantic meaning of the applicable instructions and conversation rather than keyword classification.
+
+The runtime uses a whitelist decision: an action is admissible only when authority covers every effect, its exact target lies inside admitted scope, operation-specific gates are satisfied, approvals are resolved, and preservation and recovery obligations are met. Effect classes distinguish observation, local mutation, external mutation, destructive change, Git history or refs, cross-thread coordination, and ownership transfer. Authorization already granted remains active until completion, superseding steering or instructions, or a genuine stop boundary.
+
+Scope is admitted by minimal causal closure rather than file count, subsystem reachability, or architectural opportunity. Explicitly requested work, required root-cause dependencies, and induced consequences enter the task when omission would make the confirmed result incorrect, internally inconsistent, unverifiable, or immediately nonfunctional. Adjacent defects, cleanup, and future implementation require separate steering; future work can still constrain design choices inside the current boundary.
+
+This model needs an applicability procedure because instruction discovery alone does not establish correct action selection. Before a consequential action, the agent identifies its effects, authority source, exact target, scope basis, preservation duties, operation-specific gates, later steering, and unresolved approvals. Representative examples calibrate this decision boundary without becoming request-specific rules.
+
+Completion, stopping, and progress are separate states. Completion requires evidence of the requested outcome. A stop boundary makes the next required action unavailable or unauthorized. A progress checkpoint communicates intermediate state while the task remains active.
+
+Confirmed future work constrains choices inside the current causal closure but does not authorize future implementation. Verification may inspect a wider system, but a discovered failure expands implementation only when it was caused by the current change, breaks the confirmed result, or is an induced consequence.
+
+Execution strategy is a separate control layer inside the authorized contract. It distinguishes activity from progress, requires new justification for repeated expensive work, preserves evidence whose prerequisites remain valid, and selects diagnostic, affected, and acceptance verification according to their different purposes. Strategy review changes how authorized work proceeds; it neither broadens scope nor creates a new approval checkpoint.
+
+Cross-thread coordination is a distinct effect rather than an implied consequence of implementation authority. The coordination skill separates dispatch, target execution, result availability, route readability, delivery, origin consumption, integration, runtime relocation, and semantic ownership. Response-dependent work is admissible only when a verified push or pull route exists before dispatch; a notice can explicitly require no response. Tool mapping remains a dated reference because active runtime contracts are authoritative.
+
+Recurring incidents are classified before instructions are changed. A policy gap may justify a minimal new invariant. An applicability failure calls for better routing, a decision procedure, or a boundary example. A pure execution failure calls for regression evidence or an external control where available, not another paraphrase of the same rule.
+
 ## Evidence standard
 
 Public studies identify failure risks in their tested models and tasks. They do not establish the failure rate or internal disposition of the model running a particular Codex task. Local observations refer to the supplied task records and the harness-revision discussion, not a universal model trait.
@@ -88,6 +108,10 @@ The user supplied twelve numbered observations with a separate warning that some
 | Generic UI construction (9) | Derive the visible and accessible structure from the actual task | Product UI and its product-specific audit |
 | Documentation as edit history (10) | Rebuild the complete narrative in its declared temporal perspective | Technical Documentation |
 | Optimization for surrogate success signals (11) | Judge the requested result directly; preserve user state rather than seeking a clean tree | Global completion principle and each domain's completion judgment |
+| Unauthorized expansion or contraction of task scope, authority, side effects, or completion state | Maintain one semantic task contract, admit scope by minimal causal closure, and whitelist consequential actions by effect | Global runtime control model, Software Evolution boundary selection, and task-control regression evaluation |
+| Repeated expensive work, evidence loss, and modification-verification churn | Review strategy from observable repetition and progress signals; preserve independent checkpoints and separate diagnostic, affected, and acceptance verification | Global execution strategy and Software Evolution verification |
+| Case-specific rules and failure to apply existing general rules | Classify policy gaps, applicability failures, and execution failures before changing instructions | Global instruction maintenance and task-control regression evaluation |
+| Cross-thread results lost, unread, or mistaken for completion | Verify a return path before dispatch and track delivery, consumption, integration, and ownership separately | Thread Coordination and its regression evaluation |
 
 These are risk controls rather than assertions that every model always exhibits every behavior. The user reports warrant addressing the risks in this harness. They do not support claims about the training-data origin of UI patterns or the model's internal memory architecture.
 
@@ -110,3 +134,7 @@ Useful cases cover a reversed premise in partially completed work, a plan-only r
 Include a case where the user's suggested diagnosis is wrong. The agent should implement the user's intended outcome while using evidence to correct the diagnosis. Include an unchanged-requirement case to check that reconstruction does not cause gratuitous rewriting.
 
 For independent first-response checks, use short natural requests without inserting the expected rules into the prompt. A readable rule hierarchy remains a design decision rather than proof of improved behavior. First-response success does not establish correct implementation over a complete software task.
+
+The task-control cases in [Task-control regression evaluation](../evals/task-control.md) exercise complete trajectories and observable state changes. They are evaluation evidence, not an additional runtime policy source. Passing them does not prove universal compliance, and failing them does not by itself identify whether the remaining cause is routing, model execution, or a higher-priority instruction.
+
+The [thread-coordination cases](../evals/thread-coordination.md) exercise dispatch, return-path selection, blocker propagation, result consumption, wait justification, and ownership transfer. They likewise evaluate observed trajectories rather than establishing authority or replacing active tool contracts.

@@ -71,6 +71,14 @@ seed_legacy_install() {
   } > "$state_dir/manifest.tsv"
 }
 
+seed_five_link_install() {
+  local home_dir="$1"
+  local repository="$2"
+  seed_legacy_install "$home_dir" "$repository"
+  ln -s "$repository/skills/git-workflow" "$home_dir/.agents/skills/git-workflow"
+  printf 'link\t%s\t%s\n' "$home_dir/.agents/skills/git-workflow" "$repository/skills/git-workflow" >> "$home_dir/.codex/.codex-swe-harness/manifest.tsv"
+}
+
 home_dir="$(new_environment dry-run)"
 run_installer "$home_dir" --dry-run >/dev/null
 [[ ! -e "$home_dir/.codex" ]] || fail "dry-run created Codex home"
@@ -91,6 +99,7 @@ assert_link "$home_dir/.agents/skills/software-evolution" "$REPOSITORY_ROOT/skil
 assert_link "$home_dir/.agents/skills/git-workflow" "$REPOSITORY_ROOT/skills/git-workflow"
 assert_link "$home_dir/.agents/skills/product-ui" "$REPOSITORY_ROOT/skills/product-ui"
 assert_link "$home_dir/.agents/skills/technical-documentation" "$REPOSITORY_ROOT/skills/technical-documentation"
+assert_link "$home_dir/.agents/skills/thread-coordination" "$REPOSITORY_ROOT/skills/thread-coordination"
 run_installer "$home_dir" --check >/dev/null
 run_installer "$home_dir" --yes | grep -q 'already current' || fail "repeat install was not idempotent"
 pass "fresh install links every source and repeat install is idempotent"
@@ -102,12 +111,22 @@ if run_installer "$home_dir" --check >/dev/null 2>&1; then
 fi
 run_installer "$home_dir" --yes >/dev/null
 assert_link "$home_dir/.agents/skills/git-workflow" "$REPOSITORY_ROOT/skills/git-workflow"
+assert_link "$home_dir/.agents/skills/thread-coordination" "$REPOSITORY_ROOT/skills/thread-coordination"
 run_installer "$home_dir" --check >/dev/null
 link_count="$(grep -c $'^link\t' "$home_dir/.codex/.codex-swe-harness/manifest.tsv")"
-[[ "$link_count" == "5" ]] || fail "legacy update did not write the five-link manifest"
+[[ "$link_count" == "6" ]] || fail "legacy update did not write the six-link manifest"
 backup_count="$(find "$home_dir/.codex/.codex-swe-harness/backups" -name manifest.tsv -type f | wc -l | tr -d ' ')"
 [[ "$backup_count" == "1" ]] || fail "legacy update did not preserve one recovery manifest"
 pass "legacy four-link installation upgrades to the current layout"
+
+home_dir="$(new_environment five-link-upgrade)"
+seed_five_link_install "$home_dir" "$REPOSITORY_ROOT"
+run_installer "$home_dir" --yes >/dev/null
+assert_link "$home_dir/.agents/skills/thread-coordination" "$REPOSITORY_ROOT/skills/thread-coordination"
+run_installer "$home_dir" --check >/dev/null
+link_count="$(grep -c $'^link\t' "$home_dir/.codex/.codex-swe-harness/manifest.tsv")"
+[[ "$link_count" == "6" ]] || fail "five-link update did not write the six-link manifest"
+pass "legacy five-link installation upgrades to the current layout"
 
 home_dir="$(new_environment legacy-collision)"
 seed_legacy_install "$home_dir" "$REPOSITORY_ROOT"
@@ -120,6 +139,18 @@ fi
 link_count="$(grep -c $'^link\t' "$home_dir/.codex/.codex-swe-harness/manifest.tsv")"
 [[ "$link_count" == "4" ]] || fail "legacy collision rewrote the manifest"
 pass "legacy update refuses an occupied new target before mutation"
+
+home_dir="$(new_environment five-link-collision)"
+seed_five_link_install "$home_dir" "$REPOSITORY_ROOT"
+mkdir -p "$home_dir/.agents/skills/thread-coordination"
+printf 'user owned\n' > "$home_dir/.agents/skills/thread-coordination/keep.txt"
+if run_installer "$home_dir" --yes >/dev/null 2>&1; then
+  fail "five-link update overwrote an unmanaged thread-coordination target"
+fi
+[[ -f "$home_dir/.agents/skills/thread-coordination/keep.txt" ]] || fail "five-link collision changed user content"
+link_count="$(grep -c $'^link\t' "$home_dir/.codex/.codex-swe-harness/manifest.tsv")"
+[[ "$link_count" == "5" ]] || fail "five-link collision rewrote the manifest"
+pass "five-link update refuses an occupied new target before mutation"
 
 home_dir="$(new_environment moved-checkout)"
 checkout_a="$TEST_ROOT/moved-checkout/checkout-a"
@@ -135,6 +166,7 @@ run_checkout_installer "$checkout_b" "$home_dir" --yes >/dev/null
 assert_link "$home_dir/.codex/AGENTS.md" "$checkout_b/global/AGENTS.md"
 assert_link "$home_dir/.agents/skills/git-workflow" "$checkout_b/skills/git-workflow"
 assert_link "$home_dir/.agents/skills/product-ui" "$checkout_b/skills/product-ui"
+assert_link "$home_dir/.agents/skills/thread-coordination" "$checkout_b/skills/thread-coordination"
 backup_count="$(find "$home_dir/.codex/.codex-swe-harness/backups" -name manifest.tsv -type f | wc -l | tr -d ' ')"
 [[ "$backup_count" == "1" ]] || fail "checkout move did not create one recovery backup"
 pass "managed update repoints a moved checkout and records recovery state"

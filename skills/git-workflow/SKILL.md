@@ -17,6 +17,22 @@ This skill owns safe Git operations and change provenance. `software-evolution` 
 
 Apply this skill when an operation changes Git state or existing Git state affects safe execution. A read-only inspection does not authorize a later mutation.
 
+## Git action model
+
+Classify each Git action as one or more of:
+
+- inspection;
+- working-state mutation;
+- index mutation;
+- new history;
+- ref or history movement;
+- external ref mutation;
+- state discard or relocation.
+
+The action is admissible when global authority covers every effect and the exact repository, worktree, target, provenance, publication state, verification duty, preservation duty, and recovery path required by that operation are established.
+
+A commit requires user authorization or an applicable repository workflow. Remote mutation requires external-effect authority. Shared-history rewrite requires exact, explicit authorization. State discard or relocation requires an exact inventory of affected user state plus a preservation and recovery plan.
+
 ## Establish authorization and state
 
 ### Authorization

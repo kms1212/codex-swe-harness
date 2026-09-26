@@ -8,7 +8,7 @@ Compatibility adapters and migrations serve different boundary needs. An adapter
 
 ## Evidence gate
 
-Do not introduce a compatibility mechanism or migration until all of the following are identified:
+A compatibility mechanism or migration is admissible when all of the following are identified:
 
 - the concrete consumer, persistent state, peer, or external contract that must be preserved;
 - the source and target compatibility boundaries;
@@ -17,7 +17,7 @@ Do not introduce a compatibility mechanism or migration until all of the followi
 - whether preservation requires temporary coexistence or a one-time state transition;
 - the completion, recovery, and removal conditions that apply to the chosen mechanism.
 
-If these facts are absent, use direct replacement.
+When these facts are absent, direct replacement is the admitted design.
 
 ## Conditions that can establish a real boundary
 

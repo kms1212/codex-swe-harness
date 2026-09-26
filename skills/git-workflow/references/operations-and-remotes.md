@@ -2,9 +2,13 @@
 
 Read this reference for branch and worktree operations, stash, conflicts, merge, rebase, cherry-pick, revert, amend, history rewrite, push, force push, tags, submodules, nested repositories, or other ref mutation.
 
+## Operation gate
+
+Admit an operation when its effect classes are authorized and the sections below establish its exact repository, worktree, target state, provenance, publication status, preservation duties, verification, and recovery path. Apply every section whose effect is present; one satisfied gate does not imply another.
+
 ## Branches and worktrees
 
-Create a branch when it provides a real isolation, review, delivery, parallel-work, or experimentation boundary. Do not create a branch automatically for every edit.
+Create a branch when it provides a real isolation, review, delivery, parallel-work, or experimentation boundary.
 
 Before switching branches, determine how staged, unstaged, and untracked state will behave:
 
@@ -21,7 +25,7 @@ Do not confuse Codex workspace roots and filesystem permissions with Git worktre
 
 ## Stash
 
-Stash only when moving state is necessary and authorized.
+Stash is admissible when moving state is necessary and authorized.
 
 Before stashing, establish:
 
@@ -88,7 +92,7 @@ Do not retain accidental local edit order merely to avoid an authorized cleanup.
 
 ## Push and remote mutation
 
-A push is an external mutation. Before pushing, verify:
+A push is an external mutation and is admissible after verifying:
 
 - current branch or detached HEAD state;
 - exact remote;
@@ -108,7 +112,7 @@ A non-fast-forward rejection is evidence of divergent state, not authorization t
 
 ## Force push
 
-Force push is not a default recovery mechanism.
+Force push is admissible only as the authorized remote effect of a verified history rewrite.
 
 When an authorized history rewrite requires a remote update, prefer a lease-based operation when it can verify the expected remote state. `--force-with-lease` reduces one class of overwrite risk but does not establish that the rewrite itself is correct or authorized.
 

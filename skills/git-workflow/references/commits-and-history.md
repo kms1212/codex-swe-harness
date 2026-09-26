@@ -4,9 +4,9 @@ Read this reference when staging, committing, amending, or reorganizing unpublis
 
 ## Commit authorization
 
-Do not create a commit merely because implementation is complete.
+A commit is admissible when the user requests it or the applicable repository workflow explicitly requires it. Implementation completion by itself does not supply that authority.
 
-A task can be complete with uncommitted changes. If the user requested a commit or the applicable repository workflow explicitly includes one, do not stop after implementation and silently omit it.
+A task can be complete with uncommitted changes. When a commit is authorized, completion includes recording and verifying it.
 
 Before committing, identify the repository-specific commit convention from applicable instructions, contribution guidance, or recent relevant commits. Do not impose a global language or message format.
 
@@ -32,7 +32,7 @@ Avoid known-broken intermediate commits unless the broken or transitional state 
 
 ## Select staged content explicitly
 
-Treat the index as the exact change asserted by the next commit.
+Treat the index as the exact change asserted by the next commit. Repository-wide staging is admissible only when every included path has established provenance and belongs to that conceptual unit.
 
 Do not default to repository-wide staging such as `git add -A` or `git add .` when unrelated or uncertain changes may exist.
 

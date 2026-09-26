@@ -111,6 +111,7 @@ declare -a EXPECTED_TARGETS=(
   "$SKILLS_DIR/product-ui"
   "$SKILLS_DIR/technical-documentation"
   "$SKILLS_DIR/git-workflow"
+  "$SKILLS_DIR/thread-coordination"
 )
 declare -a EXPECTED_SOURCES=(
   "$REPOSITORY_ROOT/global/AGENTS.md"
@@ -118,6 +119,7 @@ declare -a EXPECTED_SOURCES=(
   "$REPOSITORY_ROOT/skills/product-ui"
   "$REPOSITORY_ROOT/skills/technical-documentation"
   "$REPOSITORY_ROOT/skills/git-workflow"
+  "$REPOSITORY_ROOT/skills/thread-coordination"
 )
 
 declare -a MANIFEST_TARGETS=()
@@ -163,8 +165,8 @@ read_manifest() {
   ((header_seen == 1)) || die "empty manifest: $path"
   [[ -n "$MANIFEST_REPOSITORY" ]] || die "manifest has no repository record: $path"
   local link_count="${#MANIFEST_TARGETS[@]}"
-  ((link_count == 4 || link_count == ${#EXPECTED_TARGETS[@]})) || {
-    die "manifest must contain four legacy links or ${#EXPECTED_TARGETS[@]} current links: $path"
+  ((link_count == 4 || link_count == 5 || link_count == ${#EXPECTED_TARGETS[@]})) || {
+    die "manifest must contain four or five legacy links or ${#EXPECTED_TARGETS[@]} current links: $path"
   }
 }
 
@@ -193,6 +195,7 @@ validate_manifest_sources() {
     "$MANIFEST_REPOSITORY/skills/product-ui"
     "$MANIFEST_REPOSITORY/skills/technical-documentation"
     "$MANIFEST_REPOSITORY/skills/git-workflow"
+    "$MANIFEST_REPOSITORY/skills/thread-coordination"
   )
   local index
   for index in "${!MANIFEST_SOURCES[@]}"; do
