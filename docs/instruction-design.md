@@ -20,9 +20,15 @@ Instruction discovery and interpretation are distinct checks. Codex's documented
 
 ## Task control
 
-The task model is an execution-control state. For non-trivial work it records the current mode, admitted scope, authority by effect class, preservation requirements, exclusions, completion condition, approval and stop boundaries, and unresolved blockers. These fields come from the semantic meaning of the applicable instructions and conversation rather than keyword classification.
+The task model couples operational and epistemic state. Operational state records the current mode, admitted scope, authority by effect class, preservation requirements, exclusions, completion condition, approval and stop boundaries, and unresolved blockers. Epistemic state records material facts, inferences, requirements, decisions or preferences, unknowns, evidence provenance, and validity scope. These fields come from the semantic meaning of the applicable instructions and conversation rather than keyword classification.
 
 The runtime uses a whitelist decision: an action is admissible only when authority covers every effect, its exact target lies inside admitted scope, operation-specific gates are satisfied, approvals are resolved, and preservation and recovery obligations are met. Effect classes distinguish observation, local mutation, external mutation, destructive change, Git history or refs, cross-thread coordination, and ownership transfer. Authorization already granted remains active until completion, superseding steering or instructions, or a genuine stop boundary.
+
+Claim revision follows a parallel whitelist. Facts change when new or stronger relevant evidence appears or their evidence was interpreted incorrectly. Inferences change when relevant evidence changes, a specific reasoning error is found, or the prior inference proves unsupported. Requirements, decisions, and preferences change through the authority that owns them. An unsupported claim can weaken to unknown without establishing its opposite.
+
+This separates task authority from epistemic authority. The user determines desired results, constraints, approvals, preferences, and available policy choices. A direct user report of an observed environment state is attributed evidence. Technical interpretations of that report remain separate inferences, and confidence, disagreement, repetition, or forwarding does not strengthen them.
+
+A user challenge is therefore a reassessment trigger rather than an automatic reversal. The agent revisits the claim's class, source, evidence, reasoning, environment or repository state, and validity scope; identifies any new evidence, reasoning error, requirement change, or unsupported prior claim; then maintains, revises, or weakens each claim independently. Agreement language follows that judgment rather than supplying evidence for it.
 
 Scope is admitted by minimal causal closure rather than file count, subsystem reachability, or architectural opportunity. Explicitly requested work, required root-cause dependencies, and induced consequences enter the task when omission would make the confirmed result incorrect, internally inconsistent, unverifiable, or immediately nonfunctional. Adjacent defects, cleanup, and future implementation require separate steering; future work can still constrain design choices inside the current boundary.
 
@@ -35,6 +41,8 @@ Confirmed future work constrains choices inside the current causal closure but d
 Execution strategy is a separate control layer inside the authorized contract. It distinguishes activity from progress, requires new justification for repeated expensive work, preserves evidence whose prerequisites remain valid, and selects diagnostic, affected, and acceptance verification according to their different purposes. Strategy review changes how authorized work proceeds; it neither broadens scope nor creates a new approval checkpoint.
 
 Cross-thread coordination is a distinct effect rather than an implied consequence of implementation authority. The coordination skill separates dispatch, target execution, result availability, route readability, delivery, origin consumption, integration, runtime relocation, and semantic ownership. Response-dependent work is admissible only when a verified push or pull route exists before dispatch; a notice can explicitly require no response. Tool mapping remains a dated reference because active runtime contracts are authoritative.
+
+Coordination also preserves epistemic roles. Verified facts, attributed observations, inferences, unknowns, requirements, decisions, and preferences retain their type and provenance across a task boundary. A worker's completion or confidence does not promote its inference to a fact at the origin.
 
 Recurring incidents are classified before instructions are changed. A policy gap may justify a minimal new invariant. An applicability failure calls for better routing, a decision procedure, or a boundary example. A pure execution failure calls for regression evidence or an external control where available, not another paraphrase of the same rule.
 
@@ -52,7 +60,7 @@ Sharma et al. (2023) found sycophantic behavior in five assistants across four g
 
 In the local task record, the assistant accepted proposed explanations before establishing the cause. It also reversed its interpretation of approval after user disagreement without new evidence. These are observable judgment failures; their internal cause is not established.
 
-The global evidence principle assigns requirements to the user while requiring factual diagnoses to stand on evidence. Corrective feedback changes the task model but does not prove a proposed causal explanation.
+The global evidence principle assigns requirements and preferences to the user while requiring factual diagnoses to stand on evidence. Corrective feedback can change operational terms, supply an attributed observation, challenge an inference, or combine those effects. The claim-revision whitelist determines which epistemic state actually changes.
 
 ### Anchoring on the existing answer
 
@@ -112,6 +120,8 @@ The user supplied twelve numbered observations with a separate warning that some
 | Repeated expensive work, evidence loss, and modification-verification churn | Review strategy from observable repetition and progress signals; preserve independent checkpoints and separate diagnostic, affected, and acceptance verification | Global execution strategy and Software Evolution verification |
 | Case-specific rules and failure to apply existing general rules | Classify policy gaps, applicability failures, and execution failures before changing instructions | Global instruction maintenance and task-control regression evaluation |
 | Cross-thread results lost, unread, or mistaken for completion | Verify a return path before dispatch and track delivery, consumption, integration, and ownership separately | Thread Coordination and its regression evaluation |
+| Technical conclusions reversed after unsupported user challenge | Separate task authority from epistemic authority and admit claim revisions only through evidence, reasoning correction, applicable steering, or recognition of unsupported prior claims | Global epistemic state and task-control regression evaluation |
+| Claim type lost across task boundaries | Preserve evidence provenance and distinguish fact, inference, requirement, decision, preference, and unknown in coordination messages | Thread Coordination and its regression evaluation |
 
 These are risk controls rather than assertions that every model always exhibits every behavior. The user reports warrant addressing the risks in this harness. They do not support claims about the training-data origin of UI patterns or the model's internal memory architecture.
 
@@ -133,8 +143,12 @@ Useful cases cover a reversed premise in partially completed work, a plan-only r
 
 Include a case where the user's suggested diagnosis is wrong. The agent should implement the user's intended outcome while using evidence to correct the diagnosis. Include an unchanged-requirement case to check that reconstruction does not cause gratuitous rewriting.
 
+Include multi-turn challenges where the user disputes a technical conclusion without new evidence, where reassessment reveals a concrete reasoning error, where one message mixes workflow steering with a factual question, and where the user supplies a direct observation plus an unverified cause. Score the resulting conclusion, certainty, next action, and identified update source rather than apology or agreement wording.
+
 For independent first-response checks, use short natural requests without inserting the expected rules into the prompt. A readable rule hierarchy remains a design decision rather than proof of improved behavior. First-response success does not establish correct implementation over a complete software task.
 
 The task-control cases in [Task-control regression evaluation](../evals/task-control.md) exercise complete trajectories and observable state changes. They are evaluation evidence, not an additional runtime policy source. Passing them does not prove universal compliance, and failing them does not by itself identify whether the remaining cause is routing, model execution, or a higher-priority instruction.
 
 The [thread-coordination cases](../evals/thread-coordination.md) exercise dispatch, return-path selection, blocker propagation, result consumption, wait justification, and ownership transfer. They likewise evaluate observed trajectories rather than establishing authority or replacing active tool contracts.
+
+These text instructions cannot establish deterministic resistance to sycophancy or perfect instruction following. Semantic labels can themselves be applied incorrectly. Only held-out trajectories that inspect evidence use, conclusion revision, uncertainty, and consequential actions provide behavioral evidence, and that evidence remains scoped to the recorded harness, model, tools, and execution conditions.

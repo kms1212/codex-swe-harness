@@ -11,6 +11,8 @@ Preserve the parent task contract when authorized work crosses a task, thread, o
 
 Track target completion, result availability, route readability, delivery, origin consumption, and integration as separate facts. A target can finish before its result is available to the origin, and delivery does not establish that the origin consumed or integrated it.
 
+Preserve the semantic class and provenance of material claims across the boundary. Forwarding, repetition, and target completion do not turn an inference, preference, decision, unknown, or user-reported observation into a verified fact.
+
 Loading this skill grants no authority to create a thread, spawn or delegate to an agent, mutate local or external state, expand scope, or transfer ownership.
 
 ## Responsibility
@@ -57,6 +59,11 @@ change=
 preserve=
 ref=
 evidence=
+fact=
+infer=
+requirement=
+decision=
+preference=
 result=
 unknown=
 block=
@@ -65,7 +72,13 @@ return=
 done=
 ```
 
-These fields represent task and goal, scope, authority, steering delta, preservation duties, references and evidence, result, uncertainty, blocker or requested input, response routing, and completion. Omit empty roles rather than filling a template mechanically.
+These fields represent task and goal, scope, authority, steering delta, preservation duties, references and evidence, facts, inferences, requirements, decisions, preferences, result, uncertainty, blocker or requested input, response routing, and completion. Omit empty roles rather than filling a template mechanically.
+
+## Preserve epistemic roles
+
+Use epistemic fields only when the distinction changes the receiver's decision. A `fact` carries its evidence provenance and validity scope when those matter. An `infer` remains an inference until the receiver verifies it. A user-reported observation travels as attributed `evidence`; any proposed cause travels separately as `infer`. User-controlled outcomes travel as `requirement`, and admissible choices or preferences travel as `decision` or `preference`.
+
+Do not relabel a claim merely to simplify a message. The receiver evaluates a reported claim against the parent task's evidence and authority rather than treating the sender's confidence or completion status as validation.
 
 ## Response modes
 
@@ -84,7 +97,7 @@ Before dispatch:
 1. Confirm that cross-thread coordination and the requested effect are authorized.
 2. Identify the exact target and the work it already owns or may receive.
 3. Choose the coordination act.
-4. State goal, admitted scope, authority, preservation duties, and completion condition at the precision the target needs.
+4. State goal, admitted scope, authority, preservation duties, material claim types, and completion condition at the precision the target needs.
 5. Decide whether a response is required.
 6. Select and verify push, pull, or none.
 7. Record how blockers and uncertainty return.
@@ -94,13 +107,13 @@ Before dispatch:
 
 Interpret the message inside the stated authority and scope. Preserve omitted terms from the active request when handling `STEER`. Return `BLOCK` when the next required action needs missing information, authority, or approval.
 
-For a completed request, return the result, evidence, remaining uncertainty, and completion status through the selected route. Do not imply parent-task completion unless the origin assigned that judgment.
+For a completed request, return the result, evidence, material facts and inferences, remaining uncertainty, and completion status through the selected route. Preserve user requirements, decisions, and preferences as their own roles. Do not imply parent-task completion unless the origin assigned that judgment.
 
 ## Origin behavior
 
 In pull mode, perform the promised read or wait until the required terminal state is observable or a genuine stop boundary occurs. In push mode, verify that the runtime actually delivered the response before relying on it.
 
-Consume the result by checking identity, scope, evidence, uncertainty, and preservation obligations. Integrate only the portion that remains valid under the parent contract. A child or target report is evidence, not automatic acceptance.
+Consume the result by checking identity, scope, claim types, evidence provenance, validity scope, uncertainty, and preservation obligations. Integrate only the portion that remains valid under the parent contract. A child or target report is evidence, not automatic acceptance, and its inference does not become a fact without an admissible epistemic update.
 
 ## Wait admissibility
 

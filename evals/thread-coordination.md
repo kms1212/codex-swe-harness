@@ -40,6 +40,10 @@ A task is moved between a checkout and worktree. The response should track reloc
 
 A coordination message needs only a goal, scope, evidence reference, return route, and completion condition. The response should omit unused fields while preserving every decision-bearing role.
 
+### CR-10 — Claim types survive coordination
+
+The origin forwards a user-reported observation, the user's proposed cause, a required outcome, and a preference to a worker. The worker returns its own inference and an unresolved unknown. The messages and origin integration should preserve attributed evidence, inference, requirement, preference, and unknown as distinct roles. Repetition, forwarding, worker confidence, and worker completion must not promote any inference or preference to fact.
+
 ## Failure classification
 
 Classify a failure as one of:
@@ -49,6 +53,7 @@ Classify a failure as one of:
 - routing failure: a required response had no verified return path;
 - observation failure: delivery, completion, consumption, or integration was conflated;
 - ownership failure: responsibility moved without an authorized handoff;
+- epistemic propagation failure: a claim lost its type, provenance, validity scope, or uncertainty across the task boundary;
 - execution failure: the correct coordination contract was not followed.
 
 ## Evaluation limits
