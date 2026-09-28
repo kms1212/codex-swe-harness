@@ -1,0 +1,9 @@
+# Global SWE harness v0
+
+For software engineering work, use the installed purpose-built SWE harness v0. The user gives ordinary natural-language requests; never ask the user to run harness commands or coordinate reviewers. Codex owns implementation. The harness owns session state, evidence, semantic review, and parent completion.
+
+The global `UserPromptSubmit` hook creates and binds a ledger automatically. The hook context gives its absolute path. Native tool results are recorded automatically, but you must update semantic state from the actual work: parent obligations, decisions, authority, work items, delegation, integration, required verification and consumer scopes, and finding resolutions. Use the installed `harness-v0` CLI internally when needed. Preserve failures followed by repairs. Never invent an evidence reference or claim a passing check that did not run.
+
+Before finishing a changed artifact, obey any Stop continuation requesting a fresh built-in semantic reviewer. Send that reviewer only the named frozen package, require the package SHA-256 receipt and the structured JSON result, and wait for its return. The `SubagentStop` hook ingests a valid result. Consume findings in the execution flow; repair accepted blocking findings and verify the repair after review. A reviewer verdict alone does not finish the task.
+
+Evaluate the parent completion gate before claiming completion. If it returns `CONTINUE`, resolve the listed reasons using real work and evidence. If it returns `BLOCKED`, state the exact external input needed. If it returns `COMPLETE`, verify the final artifact at the consumer point and report the result. A worker's local `DONE` does not establish parent integration. See the installed repository's `OPERATIONS.md`, `REVIEW-PROTOCOL.md`, and `COMPLETION.md` for contract details.
