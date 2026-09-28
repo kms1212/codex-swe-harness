@@ -102,13 +102,18 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
         elif tool_response.get("exit_code") == 0 or tool_response.get("isError") is False:
             status = "PASS"
     command = str(tool_input.get("command", tool_input.get("cmd", ""))) if isinstance(tool_input, dict) else str(tool_input)[:300]
+    if isinstance(tool_response, str) and TEST_WORDS.search(command):
+        if re.search(r"\bFAILED\b|\b[1-9][0-9]* failed\b", tool_response):
+            status = "FAIL"
+        elif re.search(r"Ran \d+ tests? in [^\n]+\n\nOK\b|\b\d+ passed\b", tool_response):
+            status = "PASS"
     if name in {"apply_patch", "Edit", "Write"} or re.search(r"(^|[;&| ])(touch|cp|mv|mkdir|sed -i|tee)\b|(^|[^<>])>(?!>)", command):
         ledger.append_event("artifact_write_observed", {"artifact_ref": str(raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json"), "tool_use_id": token})
     scope = "test" if TEST_WORDS.search(command) else f"tool:{name}"
     state = ledger.read()
     index = len(state["verification_chronology"]) + 1
     ref = f"tool:{token}"
-    revision = state["completion_state"].get("candidate_revision")
+    revision = state["completion_state"].get("candidate_revision") or _candidate(Path(event.get("cwd") or os.getcwd()), ledger)[0]
     ledger.update("verification_chronology", {"chronology_index": index, "action": "native tool result", "command_or_tool": command[:500] or name,
         "scope": scope, "observable_result": summary, "evidence_ref": ref, "status": status, "artifact_revision": revision})
     ledger.update("evidence", {"evidence_id": ref, "producer": name, "operation": command[:500] or name,
@@ -212,7 +217,18 @@ def handle(event: dict) -> dict | None:
         if kind == "PostToolUse":
             _tool_result(event, ledger)
         elif kind == "SubagentStart":
-            ledger.append_event("native_subagent_started", {"agent_id": event.get("agent_id"), "agent_type": event.get("agent_type"), "turn_id": event.get("turn_id")})
+            agent_id = str(event.get("agent_id") or "")
+            ledger.append_event("native_subagent_started", {"agent_id": agent_id, "agent_type": event.get("agent_type"), "turn_id": event.get("turn_id")})
+            if agent_id and not ledger.read()["completion_state"].get("pending_review_hash"):
+                work_id = "native-" + re.sub(r"[^A-Za-z0-9_-]", "_", agent_id)
+                if not any(item["work_item_id"] == work_id for item in ledger.read()["work_items"]):
+                    ledger.update("work_items", {"work_item_id": work_id, "parent_id": ledger.read()["task_id"],
+                        "objective": f"Native subagent {event.get('agent_type') or 'work'}", "owner": agent_id, "status": "ACTIVE",
+                        "dependencies": [], "produced_changes": [], "verification_refs": [], "evidence_refs": [],
+                        "remaining_issues": [], "integration_notes": "Await native result and parent integration"})
+                    ledger.update("delegated_work", {"id": work_id, "work_item_id": work_id, "owner": agent_id,
+                        "expected_result": "native subagent result", "return_destination": ledger.read()["task_id"],
+                        "status": "DISPATCHED", "result_refs": [], "consumed_refs": [], "integration_refs": []})
         elif kind == "SubagentStop":
             message = event.get("last_assistant_message") or ""
             result = _parse_result(message)
@@ -230,7 +246,21 @@ def handle(event: dict) -> dict | None:
                     ledger._write_state(state)
                     ledger.append_event("review_artifact_fingerprint_recorded", {"review_id": review["review_id"], "fingerprint": fingerprint})
                     return _context(kind, f"SWE review {review['review_id']} was ingested into the parent ledger. Consume and resolve every blocking finding before completion.")
-            ledger.append_event("native_subagent_returned", {"agent_id": event.get("agent_id"), "turn_id": event.get("turn_id"), "result_hash": digest(message)})
+            agent_id = str(event.get("agent_id") or "")
+            result_ref = "subagent:" + re.sub(r"[^A-Za-z0-9_-]", "_", agent_id)
+            ledger.append_event("native_subagent_returned", {"agent_id": agent_id, "turn_id": event.get("turn_id"), "result_hash": digest(message)})
+            state = ledger.read()
+            work = next((item for item in state["work_items"] if item["work_item_id"] == "native-" + re.sub(r"[^A-Za-z0-9_-]", "_", agent_id)), None)
+            if work:
+                index = len(state["verification_chronology"]) + 1
+                ledger.update("verification_chronology", {"chronology_index": index, "action": "native subagent returned",
+                    "command_or_tool": agent_id, "scope": "delegation", "observable_result": message[:800],
+                    "evidence_ref": result_ref, "status": "UNKNOWN"})
+                ledger.update("evidence", {"evidence_id": result_ref, "producer": agent_id, "operation": "native subagent return",
+                    "observable_result": message[:800], "scope": "delegation", "chronology_index": index,
+                    "artifact_refs": [str(event.get("agent_transcript_path"))] if event.get("agent_transcript_path") else []})
+                ledger.transition("work_items", work["work_item_id"], {"status": "DONE", "evidence_refs": [result_ref]}, [result_ref])
+                ledger.transition("delegated_work", work["work_item_id"], {"status": "RETURNED", "result_refs": [result_ref]}, [result_ref])
         elif kind == "Stop":
             return _stop(event, ledger)
     return None

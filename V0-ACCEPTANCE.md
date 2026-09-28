@@ -1,6 +1,14 @@
 # v0 acceptance record
 
-Status: **v0 release candidate for supervised local use**. Source, isolated wheel installation, active Stop hook invocation, native reviewer activation, and controlled behavior have observable evidence. This is not a claim of general reviewer quality superiority or readiness for unattended global installation. The prior isolation study did not select a quality winner.
+## Global installation update
+
+The v0 core began at commit `6217170`. The global integration installs `~/.codex/AGENTS.md`, six lifecycle hooks in `~/.codex/hooks.json`, and a verified package in `~/.codex/harness-v0/venv`. The exact hook definition was trusted in Codex's interactive `/hooks` flow. `UserPromptSubmit` binds a ledger to the native session; PostToolUse records raw tool evidence; Stop routes a frozen package to a fresh built-in reviewer and runs the parent completion gate; SubagentStop ingests structured review results or records delegated work returns. Active ledgers live in `/private/tmp/harness-v0-sessions` and are mirrored to `~/.codex/harness-v0/archive` for continuation recovery.
+
+A pre-final fresh Codex CLI session, `01a0e7c1-ea27-7c30-978a-64296ae3b9cd`, received an ordinary natural-language task and produced an order-summary CLI, tests, README, and sample CSV in `/private/tmp/harness-v0-live-acceptance-3`. It ran two native semantic reviews with no findings and finished with ledger status `COMPLETE`, no pending review, and verified sample output. Final acceptance still requires a new run after the last installation and a source/install/active revision match.
+
+## Historical core RC assessment
+
+At the original `6217170` core checkpoint, status was **v0 release candidate for supervised local use**. The numbered observations below describe that checkpoint and are retained as historical evidence. The prior isolation study did not select a quality winner.
 
 1. **Active runtime:** Native subagents actually received frozen packages and returned hash receipts and structured findings in this Codex session. The Python CLI runs from an isolated installed wheel. An isolated Codex CLI invocation loaded the optional Stop hook through a vetted one-off configuration and recorded a continuation. Persistent trust in the user's project has not been installed.
 2. **Canonical state:** Executable state distinguishes parent obligations, work items, delegation, integration, decisions, epistemic classes, authority, and chronology. Twenty-two deterministic tests cover key transitions and gate distinctions. New authority state remains unspecified until the actual policy is recorded. Concurrent writer merge semantics are not implemented; one integrator serializes updates.

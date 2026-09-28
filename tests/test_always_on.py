@@ -46,6 +46,7 @@ class AlwaysOnTests(unittest.TestCase):
                 self.assertIn("Useful content.", package["candidate_result"]["aggregate_diff"])
                 self.assertEqual(ledger.read()["completion_state"]["candidate_revision"], "declared-content-revision")
                 always_on.handle({**base, "hook_event_name": "SubagentStart", "agent_id": "/root/reviewer", "agent_type": "default"})
+                self.assertEqual(ledger.read()["work_items"], [])
                 result = {"review_id": "native-review-1", "package_hash": package_hash, "reviewer_adapter": "builtin_subagent",
                     "findings": [], "overall_completion_risk": "low", "unresolved_unknowns": []}
                 always_on.handle({**base, "hook_event_name": "SubagentStop", "agent_id": "/root/reviewer", "agent_type": "default",
@@ -60,6 +61,33 @@ class AlwaysOnTests(unittest.TestCase):
                 shutil.rmtree(ledger.directory)
                 always_on.handle({**base, "hook_event_name": "SessionStart", "source": "resume"})
                 self.assertEqual(Ledger(root / "sessions" / session).read()["reviews"][-1]["review_id"], "native-review-1")
+
+    def test_native_work_return_and_test_result_are_recorded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "project"
+            project.mkdir()
+            base = {"session_id": "test-session-456", "cwd": str(project), "turn_id": "turn-1"}
+            with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "ARCHIVE_HOME", root / "archive"):
+                always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Build a Python program with tests"})
+                ledger = Ledger(root / "sessions" / base["session_id"])
+                always_on.handle({**base, "hook_event_name": "SubagentStart", "agent_id": "child-123", "agent_type": "default"})
+                state = ledger.read()
+                self.assertEqual(state["work_items"][0]["status"], "ACTIVE")
+                self.assertEqual(state["delegated_work"][0]["status"], "DISPATCHED")
+                always_on.handle({**base, "hook_event_name": "SubagentStop", "agent_id": "child-123", "agent_type": "default",
+                    "last_assistant_message": "Reviewed the edge cases and returned suggestions."})
+                state = ledger.read()
+                self.assertEqual(state["work_items"][0]["status"], "DONE")
+                self.assertEqual(state["delegated_work"][0]["status"], "RETURNED")
+                self.assertEqual(state["delegated_work"][0]["result_refs"], ["subagent:child-123"])
+                always_on.handle({**base, "hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_use_id": "tests-pass",
+                    "tool_input": {"command": "python3 -m unittest discover -s tests -v"},
+                    "tool_response": "Ran 3 tests in 0.001s\n\nOK\n"})
+                always_on.handle({**base, "hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_use_id": "tests-fail",
+                    "tool_input": {"command": "python3 -m unittest discover -s tests -v"},
+                    "tool_response": "Ran 3 tests in 0.001s\n\nFAILED (failures=1)\n"})
+                self.assertEqual([item["status"] for item in ledger.read()["verification_chronology"][-2:]], ["PASS", "FAIL"])
 
 
 if __name__ == "__main__":
