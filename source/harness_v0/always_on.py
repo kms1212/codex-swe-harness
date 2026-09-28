@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -15,7 +16,8 @@ from .completion import evaluate_and_record
 from .core import Ledger, canonical_bytes, digest, review_context_hash
 from .review import BuiltinSubagentAdapter, build_package, route_review
 
-STATE_HOME = Path(os.environ.get("HARNESS_V0_STATE_HOME", str(Path.home() / ".codex/harness-v0/sessions")))
+STATE_HOME = Path(os.environ.get("HARNESS_V0_STATE_HOME", "/private/tmp/harness-v0-sessions"))
+ARCHIVE_HOME = Path(os.environ.get("HARNESS_V0_ARCHIVE_HOME", str(Path.home() / ".codex/harness-v0/archive")))
 SESSION_ID = re.compile(r"[A-Za-z0-9_-]{8,128}\Z")
 TEST_WORDS = re.compile(r"(^|\W)(pytest|unittest|jest|vitest|cargo test|go test|npm test|make test)(\W|$)", re.I)
 
@@ -33,8 +35,14 @@ def _locked(ledger: Ledger):
     with (ledger.directory / ".lock").open("a+b") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
         try:
+            archived = ARCHIVE_HOME / ledger.directory.name
+            if not ledger.state_path.exists() and (archived / "state.json").is_file():
+                shutil.copytree(archived, ledger.directory, dirs_exist_ok=True)
             yield
         finally:
+            if ledger.state_path.is_file():
+                archived.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(ledger.directory, archived, dirs_exist_ok=True, ignore=shutil.ignore_patterns(".lock"))
             fcntl.flock(stream, fcntl.LOCK_UN)
 
 
@@ -55,6 +63,7 @@ def _candidate(cwd: Path, ledger: Ledger) -> tuple[str, list[str], str]:
     diff = _run_git(cwd, "diff", "--binary", "HEAD")
     paths = []
     untracked = []
+    untracked_diff = []
     for row in status.split(b"\0"):
         if not row or len(row) < 4:
             continue
@@ -63,7 +72,10 @@ def _candidate(cwd: Path, ledger: Ledger) -> tuple[str, list[str], str]:
         if row.startswith(b"?? "):
             file_path = cwd / name
             if file_path.is_file() and not file_path.is_symlink():
-                untracked.append((name, hashlib.sha256(file_path.read_bytes()).hexdigest()))
+                content = file_path.read_bytes()
+                untracked.append((name, hashlib.sha256(content).hexdigest()))
+                untracked_diff.append(b"\n--- /dev/null\n+++ b/" + name.encode("utf-8", "replace") + b"\n" + content + b"\n")
+    diff += b"".join(untracked_diff)
     if not paths:
         writes = [event["data"] for event in ledger.events() if event["kind"] == "artifact_write_observed"]
         if writes:
@@ -153,7 +165,7 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
             state = ledger.read()
         latest = state["reviews"][-1] if state["reviews"] else None
         if not state["completion_state"]["pending_review_hash"] and (not latest or latest.get("candidate_revision") != revision or latest.get("review_context_hash") != review_context_hash(state)):
-            package = build_package(state, routing, {"artifact_refs": paths, "aggregate_diff": diff[:200000], "resulting_state": paths}, paths)
+            package = build_package(state, routing, {"artifact_refs": paths, "aggregate_diff": diff, "resulting_state": paths}, paths)
             request = BuiltinSubagentAdapter(ledger).prepare(package)
             message = ("The SWE harness prepared a frozen semantic review package. Spawn one fresh built-in subagent now as a read-only semantic evaluator. "
                 f"Give it only {request['package_path']} and ask it to read the file, independently SHA-256 hash its bytes, and return ONLY a JSON ReviewResult "
