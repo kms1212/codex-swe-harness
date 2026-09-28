@@ -1,0 +1,118 @@
+{
+  "count": 16,
+  "candidate_revision": "e10282de25b47d74362a9c1b52ed0df8d35e0aec2b6b81f35571902325e393dd",
+  "items": [
+    {
+      "id": "completion-set-01",
+      "description": "prior reviewer-isolation evidence recovered",
+      "evidence_refs": [
+        "completion-set:01"
+      ]
+    },
+    {
+      "id": "completion-set-02",
+      "description": "current Codex extension and lifecycle substrate verified",
+      "evidence_refs": [
+        "completion-set:02"
+      ]
+    },
+    {
+      "id": "completion-set-03",
+      "description": "v0 architecture fixed",
+      "evidence_refs": [
+        "completion-set:03"
+      ]
+    },
+    {
+      "id": "completion-set-04",
+      "description": "canonical state implemented",
+      "evidence_refs": [
+        "completion-set:04"
+      ]
+    },
+    {
+      "id": "completion-set-05",
+      "description": "event and evidence chronology implemented",
+      "evidence_refs": [
+        "completion-set:05"
+      ]
+    },
+    {
+      "id": "completion-set-06",
+      "description": "ReviewEvidencePackage implemented",
+      "evidence_refs": [
+        "completion-set:06"
+      ]
+    },
+    {
+      "id": "completion-set-07",
+      "description": "SemanticReview interface implemented",
+      "evidence_refs": [
+        "completion-set:07"
+      ]
+    },
+    {
+      "id": "completion-set-08",
+      "description": "built-in reviewer adapter implemented",
+      "evidence_refs": [
+        "completion-set:08"
+      ]
+    },
+    {
+      "id": "completion-set-09",
+      "description": "multi-worker-compatible work-item state implemented",
+      "evidence_refs": [
+        "completion-set:09"
+      ]
+    },
+    {
+      "id": "completion-set-10",
+      "description": "completion gate implemented",
+      "evidence_refs": [
+        "completion-set:10"
+      ]
+    },
+    {
+      "id": "completion-set-11",
+      "description": "controlled challenge evals executed",
+      "evidence_refs": [
+        "completion-set:11"
+      ]
+    },
+    {
+      "id": "completion-set-12",
+      "description": "selected real-work-derived evals executed",
+      "evidence_refs": [
+        "completion-set:12"
+      ]
+    },
+    {
+      "id": "completion-set-13",
+      "description": "source-to-active-runtime verification completed",
+      "evidence_refs": [
+        "completion-set:13"
+      ]
+    },
+    {
+      "id": "completion-set-14",
+      "description": "six architecture and operation documents completed",
+      "evidence_refs": [
+        "completion-set:14"
+      ]
+    },
+    {
+      "id": "completion-set-15",
+      "description": "V0-ACCEPTANCE.md completed",
+      "evidence_refs": [
+        "completion-set:15"
+      ]
+    },
+    {
+      "id": "completion-set-16",
+      "description": "raw evidence indexed",
+      "evidence_refs": [
+        "completion-set:16"
+      ]
+    }
+  ]
+}

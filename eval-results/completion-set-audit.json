@@ -1,0 +1,165 @@
+{
+  "count": 16,
+  "candidate_revision": "8c6bc973bf9834e015348c48a8a4552cc2815527b8feb9ae676177bacd7f1cfa",
+  "items": [
+    {
+      "ordinal": 1,
+      "description": "prior reviewer-isolation evidence recovered",
+      "evidence_ref": "completion-set:01",
+      "artifact_refs": [
+        "../harness-eval/reviewer-isolation-study-2026-09-28/FINAL-DECISION.md"
+      ],
+      "observable_result": "Historical study file inspected; 34 paired runs and no quality winner recorded."
+    },
+    {
+      "ordinal": 2,
+      "description": "current Codex extension and lifecycle substrate verified",
+      "evidence_ref": "completion-set:02",
+      "artifact_refs": [
+        "ARCHITECTURE.md",
+        "eval-results/source-to-runtime.json"
+      ],
+      "observable_result": "Current CLI/hooks capabilities documented and active hook observed."
+    },
+    {
+      "ordinal": 3,
+      "description": "v0 architecture fixed",
+      "evidence_ref": "completion-set:03",
+      "artifact_refs": [
+        "ARCHITECTURE.md"
+      ],
+      "observable_result": "Architecture document exists with component and ownership boundaries."
+    },
+    {
+      "ordinal": 4,
+      "description": "canonical state implemented",
+      "evidence_ref": "completion-set:04",
+      "artifact_refs": [
+        "source/harness_v0/core.py",
+        "tests/test_contracts.py"
+      ],
+      "observable_result": "Executable state and contract tests exist; 20 source tests passed."
+    },
+    {
+      "ordinal": 5,
+      "description": "event and evidence chronology implemented",
+      "evidence_ref": "completion-set:05",
+      "artifact_refs": [
+        "source/harness_v0/core.py",
+        "eval-results/real-work/current-v0-implementation/events.jsonl"
+      ],
+      "observable_result": "Append-only event stream and ordered verification chronology persisted."
+    },
+    {
+      "ordinal": 6,
+      "description": "ReviewEvidencePackage implemented",
+      "evidence_ref": "completion-set:06",
+      "artifact_refs": [
+        "source/harness_v0/review.py",
+        "eval-results/real-work/current-v0-implementation/current-v0-implementation-review-10.json"
+      ],
+      "observable_result": "Frozen package hash matches native reviewer receipt."
+    },
+    {
+      "ordinal": 7,
+      "description": "SemanticReview interface implemented",
+      "evidence_ref": "completion-set:07",
+      "artifact_refs": [
+        "source/harness_v0/review.py"
+      ],
+      "observable_result": "Protocol contract present in review module."
+    },
+    {
+      "ordinal": 8,
+      "description": "built-in reviewer adapter implemented",
+      "evidence_ref": "completion-set:08",
+      "artifact_refs": [
+        "source/harness_v0/review.py",
+        "eval-results/real-work/current-v0-implementation/review-result-10.json"
+      ],
+      "observable_result": "Native reviewer activation and result receipt persisted."
+    },
+    {
+      "ordinal": 9,
+      "description": "multi-worker-compatible work-item state implemented",
+      "evidence_ref": "completion-set:09",
+      "artifact_refs": [
+        "source/harness_v0/core.py",
+        "tests/test_contracts.py"
+      ],
+      "observable_result": "Work, delegation and integration distinctions exercised by tests."
+    },
+    {
+      "ordinal": 10,
+      "description": "completion gate implemented",
+      "evidence_ref": "completion-set:10",
+      "artifact_refs": [
+        "source/harness_v0/completion.py",
+        "tests/test_contracts.py"
+      ],
+      "observable_result": "Gate and Stop-hook liveness paths exercised by 20 tests."
+    },
+    {
+      "ordinal": 11,
+      "description": "controlled challenge evals executed",
+      "evidence_ref": "completion-set:11",
+      "artifact_refs": [
+        "eval-results/controlled/score.json"
+      ],
+      "observable_result": "Seven controlled v2 cases scored; exact criterion 4/6 defects, clean 0 findings."
+    },
+    {
+      "ordinal": 12,
+      "description": "selected real-work-derived evals executed",
+      "evidence_ref": "completion-set:12",
+      "artifact_refs": [
+        "eval-results/real-work/F063-live-derived/review-result-1.json",
+        "eval-results/real-work/current-v0-implementation/review-result-10.json"
+      ],
+      "observable_result": "F063 live-derived and current implementation rounds recorded."
+    },
+    {
+      "ordinal": 13,
+      "description": "source-to-active-runtime verification completed",
+      "evidence_ref": "completion-set:13",
+      "artifact_refs": [
+        "eval-results/source-to-runtime.json",
+        "eval-results/raw-traces/isolated-hook-no-work.jsonl"
+      ],
+      "observable_result": "Source/install hashes match and active hook continuation observed."
+    },
+    {
+      "ordinal": 14,
+      "description": "six architecture and operation documents completed",
+      "evidence_ref": "completion-set:14",
+      "artifact_refs": [
+        "ARCHITECTURE.md",
+        "STATE-SCHEMA.md",
+        "REVIEW-PROTOCOL.md",
+        "COMPLETION.md",
+        "EVALUATION.md",
+        "OPERATIONS.md"
+      ],
+      "observable_result": "All six current-owner documents exist."
+    },
+    {
+      "ordinal": 15,
+      "description": "V0-ACCEPTANCE.md completed",
+      "evidence_ref": "completion-set:15",
+      "artifact_refs": [
+        "V0-ACCEPTANCE.md"
+      ],
+      "observable_result": "Acceptance record answers the 13 required questions."
+    },
+    {
+      "ordinal": 16,
+      "description": "raw evidence indexed",
+      "evidence_ref": "completion-set:16",
+      "artifact_refs": [
+        "eval-results/run-index.jsonl",
+        "eval-results/raw-traces/native-trace-index.jsonl"
+      ],
+      "observable_result": "31 run-index entries and at least 22 native-child trace references present."
+    }
+  ]
+}

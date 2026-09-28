@@ -1,0 +1,11 @@
+{
+  "review_id": "current-v0-implementation-review-9-semantic",
+  "package_hash": "19848c03b90ae6d1410e0aef8a8bb82cb049becae265087fcf04a9851944b098",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [
+    {"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/completion.py:_available_work_items", "candidate_result.aggregate_diff:source/harness_v0/completion.py:evaluate_completion", "original_request:sections 16-17"], "violated_requirement": "BLOCKED must mean external input prevents progress. A DONE work item awaiting integration, or candidate changes awaiting integration, are excluded from available work and treated as blockable reasons. An unrelated external blocker can therefore make the gate return BLOCKED while integration work remains available.", "blocking": true, "confidence": 0.96},
+    {"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/review.py:build_package", "candidate_result.aggregate_diff:source/harness_v0/completion.py:evaluate_completion", "original_request:sections 8, 14, 16"], "violated_requirement": "A required semantic review must cover the current confirmed requirements. The gate checks only the review's candidate revision; adding or changing obligations after package freeze without changing artifact revision leaves the old review eligible for COMPLETE, although the reviewer never saw the updated requirements.", "blocking": true, "confidence": 0.87}
+  ],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": ["Operational false-positive rate and reviewer calibration remain unmeasured in the packet."]
+}

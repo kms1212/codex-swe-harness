@@ -1,0 +1,72 @@
+{
+  "source_to_install_match": true,
+  "modules": {
+    "core.py": {
+      "source_sha256": "4ad11123f682e1bf2c991df9e201b137058cafdfd4cf43750b6483623bfefa2e",
+      "installed_sha256": "4ad11123f682e1bf2c991df9e201b137058cafdfd4cf43750b6483623bfefa2e",
+      "matched": true
+    },
+    "review.py": {
+      "source_sha256": "f3ea0e215fd5a70851fff2a39c6e8c27e7cc6960ff65c9c79c7f450d908dd7c8",
+      "installed_sha256": "f3ea0e215fd5a70851fff2a39c6e8c27e7cc6960ff65c9c79c7f450d908dd7c8",
+      "matched": true
+    },
+    "completion.py": {
+      "source_sha256": "092f186cc6058199f3ba97d50c6cfeeedeec15b758f4e9899486844eba0a6157",
+      "installed_sha256": "092f186cc6058199f3ba97d50c6cfeeedeec15b758f4e9899486844eba0a6157",
+      "matched": true
+    },
+    "cli.py": {
+      "source_sha256": "9851f9ba244298595bc7c7cfe28fe7917cb09749e4b8fdb4edd78e13bf278227",
+      "installed_sha256": "9851f9ba244298595bc7c7cfe28fe7917cb09749e4b8fdb4edd78e13bf278227",
+      "matched": true
+    }
+  },
+  "installed_entrypoint": "/tmp/codex-swe-harness-v0-rc/bin/harness-v0",
+  "active_hook_evaluations": 12,
+  "active_hook_continued_once": true,
+  "active_hook_without_work_item_continued_once": true,
+  "active_native_review_cases": 7,
+  "installed_completion_result": {
+    "completion_evidence_refs": [],
+    "reasons": [
+      {
+        "code": "OBLIGATIONS_UNDECLARED"
+      }
+    ],
+    "remaining_obligations": [],
+    "status": "CONTINUE"
+  },
+  "current_parent_completion_result": {
+    "completion_evidence_refs": [
+      "completion-set-final-twelve",
+      "completion-set:01",
+      "completion-set:02",
+      "completion-set:03",
+      "completion-set:04",
+      "completion-set:05",
+      "completion-set:06",
+      "completion-set:07",
+      "completion-set:08",
+      "completion-set:09",
+      "completion-set:10",
+      "completion-set:11",
+      "completion-set:12",
+      "completion-set:13",
+      "completion-set:14",
+      "completion-set:15",
+      "completion-set:16",
+      "consumer-final-twelve",
+      "gate-fixes",
+      "hook-activation",
+      "hook-no-work-final-twelve",
+      "installed-consumer",
+      "installed-tests-22",
+      "policy-routing-final-twelve",
+      "realwork-f063",
+      "realwork-f063-round11"
+    ],
+    "reasons": [],
+    "status": "COMPLETE"
+  }
+}

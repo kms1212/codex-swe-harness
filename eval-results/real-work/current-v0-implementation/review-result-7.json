@@ -1,0 +1,11 @@
+{
+  "review_id": "current-v0-implementation-review-7-semantic",
+  "package_hash": "40898d4c7e49a78522a3528a2b1ab2ec47fa7492640765b835561f3cdd03490b",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [
+    {"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff#source/harness_v0/completion.py:evaluate_completion", "candidate_result.aggregate_diff#tests/test_contracts.py:test_external_block_and_repetition"], "violated_requirement": "BLOCKED must mean external input is required before authorized work can progress. The gate returns BLOCKED whenever an external blocker exists and no work item is ready, even while independent gate work remains, such as declaring obligations and verification requirements. The cited test explicitly accepts BLOCKED in that state.", "blocking": true, "confidence": 0.94},
+    {"criterion": 7, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff#source/harness_v0/core.py:Ledger.replace", "candidate_result.aggregate_diff#source/harness_v0/cli.py:prepare-review", "candidate_result.aggregate_diff#source/harness_v0/completion.py:evaluate_completion"], "violated_requirement": "Required semantic review and completion evidence must remain enforceable through state transitions. Ledger.replace accepts an arbitrary completion_state, allowing a later replacement to clear semantic_review_required or pending_review_hash and narrow required verification scopes. The completion gate reads those mutable fields without checking the recorded review-routing decision or pending request, so a required review can be bypassed.", "blocking": true, "confidence": 0.89}
+  ],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": ["The frozen package reports active runtime evidence but does not contain the raw native trace contents needed to independently verify those observations."]
+}

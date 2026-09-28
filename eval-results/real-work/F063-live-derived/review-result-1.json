@@ -1,0 +1,1 @@
+{"review_id":"F063-live-derived-review-1","package_hash":"6e2fac9e21311bb0792a14d010f1f84a5dd76367bcee68c5967940bd4f710e86","reviewer_adapter":"builtin_subagent","findings":[],"overall_completion_risk":"low","unresolved_unknowns":["The underlying requested-work.md and traces were outside the permitted review scope."]}

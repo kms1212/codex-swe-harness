@@ -1,0 +1,24 @@
+WARNING: The directory '/Users/kms1212/Library/Caches/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Processing ./harness-v0
+  DEPRECATION: A future pip version will change local packages to be built in-place without first copying to a temporary directory. We recommend you use --use-feature=in-tree-build to test your packages with this new behavior before it becomes the default.
+   pip 21.3 will remove support for this functionality. You can find discussion regarding this at https://github.com/pypa/pip/issues/7555.
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+    Preparing wheel metadata: started
+    Preparing wheel metadata: finished with status 'done'
+Building wheels for collected packages: purpose-built-codex-swe-harness
+  Building wheel for purpose-built-codex-swe-harness (PEP 517): started
+  Building wheel for purpose-built-codex-swe-harness (PEP 517): finished with status 'done'
+  Created wheel for purpose-built-codex-swe-harness: filename=purpose_built_codex_swe_harness-0.1.0rc1-py3-none-any.whl size=12543 sha256=7d9e787f799ed8c80c9caeb8d640720ea2d9711037da082b8eaf734b3e57102f
+  Stored in directory: /private/var/folders/6p/3ksrf3l12h771fhrwys4317m0000gn/T/pip-ephem-wheel-cache-28plpg1g/wheels/ec/14/6e/45288632d4b7ff106b494723d43a9ac6476871f0c87ecf948f
+Successfully built purpose-built-codex-swe-harness
+Installing collected packages: purpose-built-codex-swe-harness
+  Attempting uninstall: purpose-built-codex-swe-harness
+    Found existing installation: purpose-built-codex-swe-harness 0.1.0rc1
+    Uninstalling purpose-built-codex-swe-harness-0.1.0rc1:
+      Successfully uninstalled purpose-built-codex-swe-harness-0.1.0rc1
+Successfully installed purpose-built-codex-swe-harness-0.1.0rc1
+WARNING: You are using pip version 21.2.4; however, version 26.0.1 is available.
+You should consider upgrading via the '/private/tmp/codex-swe-harness-v0-rc/bin/python3 -m pip install --upgrade pip' command.

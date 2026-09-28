@@ -1,0 +1,11 @@
+{
+  "review_id": "current-v0-implementation-review-11-semantic",
+  "package_hash": "3ce128fa4fa544b78e32b6437f23e4f3245d2a906eafbb20c3d744966e2909b8",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [
+    {"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/completion.py:evaluate_completion", "candidate_result.aggregate_diff:tests/test_contracts.py:test_external_blocked_when_only_blocked_work_remains"], "violated_requirement": "The gate must return BLOCKED with the required external input when an external dependency prevents completion. Its BLOCKED condition permits only WORK_ITEM_NOT_INTEGRATED reasons, so an unsatisfied parent obligation tied to that blocked work forces CONTINUE. The test avoids this case by marking the parent obligation SATISFIED before blocking the work item.", "blocking": true, "confidence": 0.96},
+    {"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/core.py:review_context_hash", "candidate_result.aggregate_diff:source/harness_v0/review.py:build_package", "candidate_result.aggregate_diff:source/harness_v0/completion.py:evaluate_completion"], "violated_requirement": "Completion must rely on semantic review of the current relevant state. The review package includes epistemic, work-item, delegation, integration, and blocker state, but review_context_hash excludes them. Changes to those states can therefore leave an earlier review valid at the gate when the candidate revision is unchanged.", "blocking": true, "confidence": 0.88}
+  ],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": ["The frozen package contains summaries, hashes, and indexes for external raw traces; their underlying contents could not be independently inspected under the package-only review constraint."]
+}

@@ -1,0 +1,8 @@
+{
+  "review_id": "current-v0-implementation-review-6-semantic",
+  "package_hash": "561c670dda698050b986f578eb41532ae7af7adf0d44f7db4c693c02c42b658d",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [{"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:runtime/stop_hook.py", "candidate_result.aggregate_diff:source/harness_v0/completion.py", "original_request:sections 16-17"], "violated_requirement": "The Stop lifecycle must act on the completion gate’s CONTINUE decision when authorized parent work remains. The hook blocks stopping only when progress_snapshot reports an available work item. A task with undeclared obligations, pending review or repair, or missing verification can return CONTINUE while having no work item; the hook then permits stopping before completion.", "blocking": true, "confidence": 0.96}],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": ["The frozen package does not establish whether another active runtime mechanism resumes tasks when the Stop hook permits stopping despite CONTINUE."]
+}

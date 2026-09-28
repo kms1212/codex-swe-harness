@@ -1,0 +1,8 @@
+{
+  "review_id": "current-v0-implementation-review-12-semantic",
+  "package_hash": "06b03cfe2747b6fdc312494fe7b8e6990a074bed1a913bdb7b6ddacf13ff8740",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [],
+  "overall_completion_risk": "low",
+  "unresolved_unknowns": ["Quality and false-positive rates across independent real-work tasks remain unmeasured.", "Persistent project hook trust and unattended operation remain untested.", "Per-child token cost and concurrent writer behavior remain unmeasured."]
+}

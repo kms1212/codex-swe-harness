@@ -1,0 +1,74 @@
+{
+  "cases": 7,
+  "defects_detected": 4,
+  "defects_total": 6,
+  "clean_false_positive": 0,
+  "invalid_final_results": 0,
+  "details": [
+    {
+      "case_id": "v2_clean",
+      "expected": null,
+      "observed": [],
+      "detected": null,
+      "native_child": "/root/fresh_clean_v2"
+    },
+    {
+      "case_id": "v2_F062_lifetime",
+      "expected": 4,
+      "observed": [
+        4
+      ],
+      "detected": true,
+      "native_child": "/root/fresh_lifetime_v2"
+    },
+    {
+      "case_id": "v2_unjustified_reversal",
+      "expected": 5,
+      "observed": [
+        1,
+        6
+      ],
+      "detected": false,
+      "native_child": "/root/review_reversal_v2"
+    },
+    {
+      "case_id": "v2_false_completion",
+      "expected": 15,
+      "observed": [
+        4,
+        14
+      ],
+      "detected": false,
+      "native_child": "/root/fresh_completion_v2"
+    },
+    {
+      "case_id": "v2_spurious_version",
+      "expected": 9,
+      "observed": [
+        1,
+        9
+      ],
+      "detected": true,
+      "native_child": "/root/review_version_v2"
+    },
+    {
+      "case_id": "v2_scope_expansion",
+      "expected": 1,
+      "observed": [
+        1
+      ],
+      "detected": true,
+      "native_child": "/root/review_scope_v2"
+    },
+    {
+      "case_id": "v2_stale_failure",
+      "expected": 11,
+      "observed": [
+        4,
+        11
+      ],
+      "detected": true,
+      "native_child": "/root/review_stale_v2"
+    }
+  ]
+}

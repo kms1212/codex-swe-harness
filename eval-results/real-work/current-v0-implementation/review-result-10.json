@@ -1,0 +1,8 @@
+{
+  "review_id": "current-v0-implementation-review-10-semantic",
+  "package_hash": "87defa9406b840e6f40bd59d06c51faef63b5b08989d3ecce886a375d4b9abf7",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [{"criterion": 15, "severity": "major", "evidence_refs": ["original_request §28 Completion set", "confirmed_requirements", "relevant_task_state.completion_state", "source/harness_v0/completion.py:evaluate_completion"], "violated_requirement": "The parent task may be marked COMPLETE after only three broad obligations are satisfied, although the original request requires every item in its explicit completion set to be satisfied. The frozen state has no individual obligations for several required outputs and validations, so the gate cannot detect their omission.", "blocking": true, "confidence": 0.96}],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": ["The frozen package references controlled evaluations, raw traces, and the run index but does not include their contents, so their completeness cannot be independently verified from this package."]
+}

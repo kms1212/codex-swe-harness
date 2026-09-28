@@ -1,0 +1,25 @@
+{
+  "review_id": "current-v0-implementation-review-4-semantic",
+  "package_hash": "7819852e3ff03e52125ba8d6d88a1fec1c0a8d18b8399784d6dac77cc31d5557",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [
+    {
+      "criterion": 5,
+      "severity": "major",
+      "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/core.py::Ledger.update(decisions)", "candidate_result.aggregate_diff:source/harness_v0/review.py::build_package.confirmed_decisions", "original_request:sections 4, 8, and 21"],
+      "violated_requirement": "The frozen review package must preserve relevant decision supersession evidence. Superseding a decision changes the prior record to SUPERSEDED, while build_package includes only currently CONFIRMED decisions and excludes the decision event history. A reviewer limited to the package cannot compare a new decision with the prior confirmed decision when assessing an unsupported reversal.",
+      "blocking": true,
+      "confidence": 0.94
+    },
+    {
+      "criterion": 15,
+      "severity": "major",
+      "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/completion.py::evaluate_completion.live_blockers", "candidate_result.aggregate_diff:source/harness_v0/completion.py::progress_snapshot.available_next_actions", "original_request:sections 16 and 17"],
+      "violated_requirement": "BLOCKED must indicate that external input prevents further progress. evaluate_completion returns BLOCKED whenever all live blockers are external, even if independent authorized work items are READY or ACTIVE. The Stop hook then declines continuation despite an available next action.",
+      "blocking": true,
+      "confidence": 0.91
+    }
+  ],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": ["The package does not show an end-to-end test of supersession review visibility or of a task with both an external blocker and independent ready work."]
+}

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "purpose-built-codex-swe-harness"
+version = "0.1.0rc1"
+description = "Evidence-bound supervisory contracts for Codex SWE tasks"
+requires-python = ">=3.9"
+
+[project.scripts]
+harness-v0 = "harness_v0.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "source"}
+
+[tool.setuptools.packages.find]
+where = ["source"]

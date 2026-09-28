@@ -1,0 +1,27 @@
+test_code_semantic_risk_requires_review (test_contracts.ContractTests) ... ok
+test_completion_replace_cannot_bypass_review_or_required_checks (test_contracts.ContractTests) ... ok
+test_decision_supersession_and_work_transition (test_contracts.ContractTests) ... ok
+test_done_work_still_needs_integration_despite_external_blocker (test_contracts.ContractTests) ... ok
+test_external_block_and_repetition (test_contracts.ContractTests) ... ok
+test_external_blocked_when_only_blocked_work_remains (test_contracts.ContractTests) ... ok
+test_external_blocker_can_link_unsatisfied_parent_obligation (test_contracts.ContractTests) ... ok
+test_external_blocker_does_not_stop_independent_ready_work (test_contracts.ContractTests) ... ok
+test_externally_blocked_dependency_is_not_available_work (test_contracts.ContractTests) ... ok
+test_frozen_package_and_native_receipt (test_contracts.ContractTests) ... ok
+test_frozen_package_preserves_superseded_decisions (test_contracts.ContractTests) ... ok
+test_parent_is_not_worker (test_contracts.ContractTests) ... ok
+test_pending_review_prevents_parent_completion (test_contracts.ContractTests) ... ok
+test_policy_fidelity (test_contracts.ContractTests) ... ok
+test_pre_review_pass_does_not_verify_repair (test_contracts.ContractTests) ... ok
+test_relevant_work_and_epistemic_changes_invalidate_review (test_contracts.ContractTests) ... ok
+test_requirement_change_invalidates_review_without_revision_change (test_contracts.ContractTests) ... ok
+test_review_must_cover_current_revision_and_target_finding (test_contracts.ContractTests) ... ok
+test_stale_failure_and_consumer (test_contracts.ContractTests) ... ok
+test_stop_hook_continues_gate_without_ready_work_item (test_contracts.ContractTests) ... ok
+test_unknown_evidence_and_stale_revision_do_not_complete (test_contracts.ContractTests) ... ok
+test_unrelated_external_blocker_does_not_hide_local_verification_work (test_contracts.ContractTests) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 0.149s
+
+OK

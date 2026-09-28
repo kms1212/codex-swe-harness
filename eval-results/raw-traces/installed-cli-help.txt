@@ -1,0 +1,13 @@
+usage: harness-v0 ledger prepare-review [-h] --type TYPE [--semantic-risk]
+                                        [--source SOURCE]
+                                        candidate_file
+
+positional arguments:
+  candidate_file
+
+optional arguments:
+  -h, --help       show this help message and exit
+  --type TYPE
+  --semantic-risk  require review for semantic risk, including code-only
+                   changes
+  --source SOURCE

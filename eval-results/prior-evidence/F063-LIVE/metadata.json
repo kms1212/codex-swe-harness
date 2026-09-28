@@ -1,0 +1,26 @@
+{
+  "batch": "smoke-plugin-enabled",
+  "case_id": "F063-LIVE",
+  "codex_cli": "0.158.0-alpha.2",
+  "elapsed_seconds": 85.809,
+  "event_count": 19,
+  "exit_code": 0,
+  "final_present": true,
+  "git_dirty": false,
+  "incident": "F063",
+  "level": "live-regression",
+  "model": "gpt-6-sol",
+  "reasoning_effort": "medium",
+  "repetition": 1,
+  "seed_control": "unavailable",
+  "system": "superpowers",
+  "timed_out": false,
+  "turn_completed_observed": true,
+  "usage": {
+    "cache_write_input_tokens": 0,
+    "cached_input_tokens": 152960,
+    "input_tokens": 168160,
+    "output_tokens": 2220,
+    "reasoning_output_tokens": 575
+  }
+}

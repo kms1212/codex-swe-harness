@@ -1,0 +1,4 @@
+{"data":{"request_hash":"65b09ba96a16e263539283df48fe2fe66b77f45f5ae1bb49173e217365727755","task_id":"smoke-final"},"kind":"request_ingested","sequence":1}
+{"data":{"completion_evidence_refs":[],"reasons":[{"code":"OBLIGATIONS_UNDECLARED"}],"remaining_obligations":[],"status":"CONTINUE"},"kind":"completion_evaluated","sequence":2}
+{"data":{"reason_codes":["OBLIGATIONS_UNDECLARED"],"status":"CONTINUE","turn_id":"isolated-smoke"},"kind":"stop_hook_evaluated","sequence":3}
+{"data":{"reason_codes":["OBLIGATIONS_UNDECLARED"],"status":"CONTINUE","turn_id":"01a0e754-7baa-7122-9929-eb424a752989"},"kind":"stop_hook_evaluated","sequence":4}

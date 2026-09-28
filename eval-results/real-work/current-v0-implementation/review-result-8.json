@@ -1,0 +1,8 @@
+{
+  "review_id": "current-v0-implementation-review-8-semantic",
+  "package_hash": "4cd6a1dcc094a7fdca2b0f3ca55a2e4dba1c33dcf9111b6a7951a49148aa1e27",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [{"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/completion.py:evaluate_completion:blockable_reasons", "original_request:sections 16-17"], "violated_requirement": "BLOCKED must mean external input is needed before any independent authorized work can proceed. The gate classifies a failing required verification or missing consumer check as externally blockable whenever an unrelated external blocker exists and no work item is ready. It can therefore return BLOCKED while local repair or verification remains possible.", "blocking": true, "confidence": 0.96}],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": []
+}

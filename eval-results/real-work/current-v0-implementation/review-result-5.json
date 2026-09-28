@@ -1,0 +1,11 @@
+{
+  "review_id": "current-v0-implementation-review-5-semantic",
+  "package_hash": "99665152ae5029da91122bf7618637bc6c21070457c747dd3cd95edf30a91ed7",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [
+    {"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/cli.py:prepare-review", "candidate_result.aggregate_diff:source/harness_v0/completion.py:evaluate_completion"], "violated_requirement": "Semantic review routing must preserve a required review for the current candidate. Each prepare-review call overwrites semantic_review_required with the latest route result; a subsequent code-only call without --semantic-risk can set it false, allowing the completion gate to skip review checks.", "blocking": true, "confidence": 0.94},
+    {"criterion": 15, "severity": "major", "evidence_refs": ["candidate_result.aggregate_diff:source/harness_v0/completion.py:evaluate_completion", "candidate_result.aggregate_diff:source/harness_v0/completion.py:progress_snapshot", "candidate_result.aggregate_diff:tests/test_contracts.py:test_external_blocker_does_not_stop_independent_ready_work"], "violated_requirement": "BLOCKED and available-next-action decisions must account for work-item dependencies. Both functions treat any READY or ACTIVE item with empty remaining_issues as actionable without checking dependencies; a task can stay CONTINUE and the Stop hook can request work when every such item depends on an externally blocked item.", "blocking": true, "confidence": 0.91}
+  ],
+  "overall_completion_risk": "medium",
+  "unresolved_unknowns": ["The frozen current-task state has no declared parent obligations or work items and remains CONTINUE, so this package does not demonstrate a final COMPLETE transition for the implementation task."]
+}

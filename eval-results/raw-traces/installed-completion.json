@@ -1,0 +1,10 @@
+{
+  "completion_evidence_refs": [],
+  "reasons": [
+    {
+      "code": "OBLIGATIONS_UNDECLARED"
+    }
+  ],
+  "remaining_obligations": [],
+  "status": "CONTINUE"
+}

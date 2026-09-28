@@ -1,0 +1,25 @@
+{
+  "review_id": "current-v0-implementation-review-3-semantic",
+  "package_hash": "3d5dfaa19f9bcb03a14752200ca4eb38eb1309f9562c21e3ea9c5135f78b582f",
+  "reviewer_adapter": "builtin_subagent",
+  "findings": [
+    {
+      "criterion": 1,
+      "severity": "major",
+      "evidence_refs": ["source/harness_v0/core.py:initial_state", "original_request:section-5"],
+      "violated_requirement": "Authority state must preserve the task's actual policy model. New tasks are initialized as closed capability sets before their policy is established, so an open denylist can be represented incorrectly.",
+      "blocking": true,
+      "confidence": 0.95
+    },
+    {
+      "criterion": 15,
+      "severity": "major",
+      "evidence_refs": ["source/harness_v0/review.py:route_review", "source/harness_v0/cli.py:prepare-review", "original_request:section-14"],
+      "violated_requirement": "Semantic-risk code changes must route to review. The CLI never passes `semantic_risk`; a code-only change therefore receives `required=false`, including code with compatibility or cross-artifact semantic risk.",
+      "blocking": true,
+      "confidence": 0.96
+    }
+  ],
+  "overall_completion_risk": "high",
+  "unresolved_unknowns": ["The package gives summary results and external references for final verification and native activation; their raw outputs cannot be independently checked from this package alone."]
+}

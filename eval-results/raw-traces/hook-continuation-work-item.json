@@ -1,0 +1,57 @@
+{
+  "artifacts": [],
+  "authority": {
+    "capabilities": [],
+    "closure": "closed",
+    "constraints": [],
+    "default_admissibility": "deny",
+    "delegation_scope": [],
+    "exceptions": [],
+    "policy_model": "capability_set",
+    "scope": "task",
+    "side_effect_scope": []
+  },
+  "blockers": [],
+  "completion_state": {
+    "evidence_refs": [],
+    "required_consumer_scopes": [],
+    "required_verification_scopes": [],
+    "semantic_review_required": false,
+    "status": "CONTINUE"
+  },
+  "decisions": [],
+  "delegated_work": [],
+  "epistemic": [],
+  "evidence": [],
+  "integration_state": {
+    "artifact_refs": [],
+    "candidate_changes": [],
+    "conflicts": [],
+    "consumer_refs": [],
+    "integrated_changes": [],
+    "unresolved_dependencies": [],
+    "verification_refs": []
+  },
+  "objective": "inspect fixture",
+  "obligations": [],
+  "original_request": "Inspect the current fixture",
+  "reviews": [],
+  "schema_version": 1,
+  "task_id": "hook-smoke",
+  "verification_chronology": [],
+  "work_items": [
+    {
+      "dependencies": [],
+      "evidence_refs": [],
+      "integration_notes": "",
+      "objective": "inspect the current fixture",
+      "owner": "root",
+      "parent_id": "hook-smoke",
+      "produced_changes": [],
+      "remaining_issues": [],
+      "status": "READY",
+      "verification_refs": [],
+      "work_item_id": "inspect"
+    }
+  ]
+}
