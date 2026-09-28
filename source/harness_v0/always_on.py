@@ -144,17 +144,18 @@ def _route(paths: list[str]) -> list[str]:
 def _stop(event: dict, ledger: Ledger) -> dict | None:
     state = ledger.read()
     cwd = Path(event.get("cwd") or os.getcwd())
-    revision, paths, diff = _candidate(cwd, ledger)
+    fingerprint, paths, diff = _candidate(cwd, ledger)
     if not paths and not state["work_items"] and not state["artifacts"]:
         ledger.append_event("nonartifact_turn_observed", {"turn_id": event.get("turn_id")})
         return None
     completion = state["completion_state"]
-    if paths and completion.get("candidate_revision") != revision:
-        completion["candidate_revision"] = revision
+    if paths and not completion.get("candidate_revision"):
+        completion["candidate_revision"] = fingerprint
         completion["status"] = "CONTINUE"
         ledger._write_state(state)
-        ledger.append_event("candidate_revision_observed", {"revision": revision, "paths": paths})
+        ledger.append_event("candidate_revision_observed", {"revision": fingerprint, "paths": paths})
         state = ledger.read()
+    revision = state["completion_state"].get("candidate_revision")
     change_types = _route(paths)
     if change_types:
         routing = route_review(change_types, semantic_risk=True)
@@ -164,7 +165,7 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
             ledger.append_event("review_routed", routing)
             state = ledger.read()
         latest = state["reviews"][-1] if state["reviews"] else None
-        if not state["completion_state"]["pending_review_hash"] and (not latest or latest.get("candidate_revision") != revision or latest.get("review_context_hash") != review_context_hash(state)):
+        if not state["completion_state"]["pending_review_hash"] and (not latest or latest.get("candidate_revision") != revision or latest.get("artifact_fingerprint") != fingerprint or latest.get("review_context_hash") != review_context_hash(state)):
             package = build_package(state, routing, {"artifact_refs": paths, "aggregate_diff": diff, "resulting_state": paths}, paths)
             request = BuiltinSubagentAdapter(ledger).prepare(package)
             message = ("The SWE harness prepared a frozen semantic review package. Spawn one fresh built-in subagent now as a read-only semantic evaluator. "
@@ -223,6 +224,11 @@ def handle(event: dict) -> dict | None:
                     activation = {"native_subagent_id": event.get("agent_id"), "package_received": True,
                         "package_hash_verified": result["package_hash"], "role_integrity": "read-only semantic evaluator"}
                     review = BuiltinSubagentAdapter(ledger).ingest(package, result, activation)
+                    fingerprint, _, _ = _candidate(Path(event.get("cwd") or os.getcwd()), ledger)
+                    state = ledger.read()
+                    state["reviews"][-1]["artifact_fingerprint"] = fingerprint
+                    ledger._write_state(state)
+                    ledger.append_event("review_artifact_fingerprint_recorded", {"review_id": review["review_id"], "fingerprint": fingerprint})
                     return _context(kind, f"SWE review {review['review_id']} was ingested into the parent ledger. Consume and resolve every blocking finding before completion.")
             ledger.append_event("native_subagent_returned", {"agent_id": event.get("agent_id"), "turn_id": event.get("turn_id"), "result_hash": digest(message)})
         elif kind == "Stop":

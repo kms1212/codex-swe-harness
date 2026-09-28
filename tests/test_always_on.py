@@ -32,6 +32,9 @@ class AlwaysOnTests(unittest.TestCase):
                     "tool_input": {"command": "cat NOTE.md"}, "tool_response": {"exit_code": 0, "output": "Useful content."}})
                 self.assertEqual(len(ledger.read()["verification_chronology"]), 1)
                 self.assertTrue((ledger.directory / "raw-tools/tool-1.json").is_file())
+                completion = ledger.read()["completion_state"]
+                completion["candidate_revision"] = "declared-content-revision"
+                ledger.replace("completion_state", completion)
                 review_prompt = always_on.handle({**base, "hook_event_name": "Stop", "stop_hook_active": False})
                 self.assertEqual(review_prompt["decision"], "block")
                 self.assertIn("fresh built-in subagent", review_prompt["reason"])
@@ -41,6 +44,7 @@ class AlwaysOnTests(unittest.TestCase):
                 package_file = next(ledger.directory.glob("*-review-*.json"))
                 package = json.loads(package_file.read_text())
                 self.assertIn("Useful content.", package["candidate_result"]["aggregate_diff"])
+                self.assertEqual(ledger.read()["completion_state"]["candidate_revision"], "declared-content-revision")
                 always_on.handle({**base, "hook_event_name": "SubagentStart", "agent_id": "/root/reviewer", "agent_type": "default"})
                 result = {"review_id": "native-review-1", "package_hash": package_hash, "reviewer_adapter": "builtin_subagent",
                     "findings": [], "overall_completion_risk": "low", "unresolved_unknowns": []}
@@ -48,6 +52,7 @@ class AlwaysOnTests(unittest.TestCase):
                     "last_assistant_message": json.dumps(result)})
                 self.assertIsNone(ledger.read()["completion_state"]["pending_review_hash"])
                 self.assertEqual(ledger.read()["reviews"][-1]["review_id"], "native-review-1")
+                self.assertTrue(ledger.read()["reviews"][-1]["artifact_fingerprint"])
                 self.assertTrue((root / "archive" / session / "state.json").is_file())
                 gate = always_on.handle({**base, "hook_event_name": "Stop", "stop_hook_active": False})
                 self.assertEqual(gate["decision"], "block")
