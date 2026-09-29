@@ -77,7 +77,7 @@ def install(root: Path = ROOT, codex_home: Path | None = None, system: str | Non
     python = venv / ("Scripts/python.exe" if system == "Windows" else "bin/python")
     if not python.exists():
         subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
-    subprocess.run([str(python), "-m", "pip", "install", "--upgrade", str(root)], check=True)
+    subprocess.run([str(python), "-m", "pip", "install", "--upgrade", str(root)], check=True, stdout=sys.stderr)
     command = f"{python} -m harness_v0.always_on"
     config = {"description": "Purpose-built SWE harness v0 global lifecycle", "hooks": {
         name: [{"hooks": [{"type": "command", "command": command, "timeout": 15,
