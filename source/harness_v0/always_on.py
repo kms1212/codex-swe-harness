@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from .completion import evaluate_and_record
 from .core import Ledger, canonical_bytes, digest, review_context_hash
 from .review import BuiltinSubagentAdapter, build_package, route_review
+from .instructions import instruction_paths, recomposition_reasons
 from .permissions import decide as decide_permission
 from .optimization import is_trivial_diff, review_path
 
@@ -105,6 +106,33 @@ def _candidate(cwd: Path, ledger: Ledger) -> tuple[str, list[str], str]:
     return revision, paths, diff.decode("utf-8", "replace")
 
 
+def _observe_instruction_changes(ledger: Ledger, revision: str, paths: list[str], cwd: Path | None = None) -> None:
+    instructions = instruction_paths(paths)
+    if not instructions:
+        return
+    state = ledger.read()
+    completion = state["completion_state"]
+    prior = set(completion.get("instruction_recomposition_required", []))
+    targets = dict(completion.get("instruction_recomposition_targets", {}))
+    for path in instructions:
+        file = cwd / path if cwd else None
+        targets[path] = hashlib.sha256(file.read_bytes()).hexdigest() if file and file.is_file() else revision
+    installation = set(completion.get("instruction_installation_required", []))
+    if cwd and (cwd / "scripts/install_global.py").is_file():
+        installation.update(instructions)
+    source_revision = _run_git(cwd, "rev-parse", "HEAD").decode("utf-8", "replace").strip() if cwd else None
+    if prior == prior | set(instructions) and completion.get("candidate_revision") == revision and targets == completion.get("instruction_recomposition_targets", {}) and installation == set(completion.get("instruction_installation_required", [])) and source_revision == completion.get("instruction_source_revision"):
+        return
+    completion["instruction_recomposition_required"] = sorted(prior | set(instructions))
+    completion["instruction_recomposition_targets"] = targets
+    completion["instruction_installation_required"] = sorted(installation)
+    completion["instruction_source_revision"] = source_revision
+    completion["candidate_revision"] = revision
+    completion["status"] = "CONTINUE"
+    ledger._write_state(state)
+    ledger.append_event("instruction_recomposition_required", {"artifacts": instructions, "targets": targets, "candidate_revision": revision})
+
+
 def _tool_result(event: dict, ledger: Ledger) -> None:
     name = str(event.get("tool_name", "unknown"))
     token = str(event.get("tool_use_id") or digest(event)[:16])
@@ -141,14 +169,19 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
         ledger.append_event("artifact_write_observed", {"artifact_ref": str(raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json"), "tool_use_id": token})
     is_test = _is_test_command(command)
     scope = "test" if is_test else f"tool:{name}"
+    cwd = Path(event.get("cwd") or os.getcwd())
+    observed_revision, observed_paths, _ = _candidate(cwd, ledger)
+    if "git commit" in command:
+        observed_paths += _run_git(cwd, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").decode("utf-8", "replace").splitlines()
+    _observe_instruction_changes(ledger, observed_revision, observed_paths, cwd)
     state = ledger.read()
     index = len(state["verification_chronology"]) + 1
     ref = f"tool:{token}"
-    revision = state["completion_state"].get("candidate_revision") or _candidate(Path(event.get("cwd") or os.getcwd()), ledger)[0]
+    revision = state["completion_state"].get("candidate_revision") or observed_revision
     verification = {"chronology_index": index, "action": "native tool result", "command_or_tool": command[:500] or name,
         "scope": scope, "observable_result": summary, "evidence_ref": ref, "status": status, "artifact_revision": revision}
     if is_test:
-        verification.update(target_identity=_candidate(Path(event.get("cwd") or os.getcwd()), ledger)[0],
+        verification.update(target_identity=observed_revision,
                             related_inputs=["repository"], execution_environment=sys.platform, expensive=True)
     ledger.update("verification_chronology", verification)
     ledger.update("evidence", {"evidence_id": ref, "producer": name, "operation": command[:500] or name,
@@ -185,7 +218,9 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
     state = ledger.read()
     cwd = Path(event.get("cwd") or os.getcwd())
     fingerprint, paths, diff = _candidate(cwd, ledger)
-    if not paths and not state["work_items"] and not state["artifacts"]:
+    _observe_instruction_changes(ledger, fingerprint, paths or state["completion_state"].get("instruction_recomposition_required", []), cwd)
+    state = ledger.read()
+    if not paths and not state["work_items"] and not state["artifacts"] and not state["completion_state"].get("instruction_recomposition_required"):
         ledger.append_event("nonartifact_turn_observed", {"turn_id": event.get("turn_id")})
         return None
     completion = state["completion_state"]
@@ -196,6 +231,16 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
         ledger.append_event("candidate_revision_observed", {"revision": fingerprint, "paths": paths})
         state = ledger.read()
     revision = state["completion_state"].get("candidate_revision")
+    if not paths and state["completion_state"].get("instruction_recomposition_required"):
+        paths = state["completion_state"]["instruction_recomposition_required"]
+        diff = _run_git(cwd, "show", "--format=", "HEAD").decode("utf-8", "replace")
+    missing_recomposition = [reason for reason in recomposition_reasons(state) if reason["code"] in {"INSTRUCTION_RECOMPOSITION_MISSING", "INSTRUCTION_WHOLE_FILE_REVIEW_MISSING"}]
+    if missing_recomposition:
+        reason = ("SWE parent completion gate is CONTINUE: instruction recomposition is required before semantic review: " + json.dumps(missing_recomposition) +
+                  ". Read the complete current instruction set, identify each artifact's semantic owner and existing principle, "
+                  "integrate or move the new meaning, remove displaced guidance, and record the instruction_changes decision with a real whole-file evidence ref. "
+                  "Then continue verification and review. Do not ask the user to run harness commands.")
+        return {"decision": "block", "reason": reason} if not event.get("stop_hook_active") else {"systemMessage": reason}
     change_types = _route(paths)
     if change_types:
         risk = len(paths) > 3 or any(kind in {"architecture", "integration"} for kind in change_types)

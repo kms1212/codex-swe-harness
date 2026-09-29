@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from .core import Ledger, review_context_hash
 from .optimization import duplicate_expensive_action, parallelizable, running_work_value, verification_reusable
+from .instructions import recomposition_reasons
 
 
 def _latest_verification(state: dict, scope: str) -> dict | None:
@@ -71,6 +72,7 @@ def evaluate_completion(state: dict) -> dict:
             reasons.append({"code": "CONSUMER_EVIDENCE_MISSING", "scope": scope})
         else:
             evidence_refs.add(latest["evidence_ref"])
+    reasons.extend(recomposition_reasons(state))
     if completion["semantic_review_required"]:
         if not state["reviews"]:
             reasons.append({"code": "SEMANTIC_REVIEW_MISSING"})

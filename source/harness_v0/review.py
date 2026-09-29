@@ -48,7 +48,7 @@ def build_package(state: dict, routing: dict, candidate_result: dict, source_ref
         "review_context_hash": review_context_hash(state),
         "relevant_task_state": {key: state[key] for key in ("objective", "work_items", "delegated_work", "integration_state", "completion_state", "blockers")},
         "relevant_epistemic_state": state["epistemic"],
-        "artifact_context": state["artifacts"], "candidate_result": candidate_result,
+        "artifact_context": state["artifacts"], "instruction_changes": state.get("instruction_changes", []), "candidate_result": candidate_result,
         "verification_chronology": chronology,
         "unresolved_state": [x for x in state["epistemic"] if x["classification"] == "UNKNOWN"] + [x for x in state["blockers"] if x.get("status") != "RESOLVED"],
         "applicable_rubric": routing["rubric"], "source_refs": source_refs,

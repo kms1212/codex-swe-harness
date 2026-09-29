@@ -28,7 +28,8 @@ def review_context_hash(state: dict) -> str:
         "integration_state": state["integration_state"],
         "blockers": state["blockers"],
         "artifacts": state["artifacts"],
-        "completion_requirements": {key: state["completion_state"].get(key) for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required", "scope_identities", "scope_environments")},
+        "instruction_changes": state.get("instruction_changes", []),
+        "completion_requirements": {key: state["completion_state"].get(key) for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required", "scope_identities", "scope_environments", "instruction_recomposition_required", "instruction_recomposition_targets", "instruction_installation_required", "instruction_source_revision")},
     })
 
 
@@ -40,10 +41,10 @@ def initial_state(task_id: str, objective: str, original_request: str) -> dict:
         "original_request": original_request, "obligations": [], "blockers": [],
         "work_items": [], "delegated_work": [],
         "integration_state": {"candidate_changes": [], "integrated_changes": [], "conflicts": [], "unresolved_dependencies": [], "verification_refs": [], "consumer_refs": [], "artifact_refs": []},
-        "completion_state": {"status": "CONTINUE", "candidate_revision": None, "pending_review_hash": None, "required_verification_scopes": [], "required_consumer_scopes": [], "scope_identities": {}, "scope_environments": {}, "semantic_review_required": False, "evidence_refs": []},
+        "completion_state": {"status": "CONTINUE", "candidate_revision": None, "pending_review_hash": None, "required_verification_scopes": [], "required_consumer_scopes": [], "scope_identities": {}, "scope_environments": {}, "semantic_review_required": False, "instruction_recomposition_required": [], "instruction_recomposition_targets": {}, "instruction_installation_required": [], "instruction_source_revision": None, "evidence_refs": []},
         "decisions": [], "epistemic": [],
         "authority": {"policy_model": "unspecified", "default_admissibility": None, "closure": None, "capabilities": [], "constraints": [], "exceptions": [], "scope": "task", "side_effect_scope": [], "delegation_scope": []},
-        "evidence": [], "reviews": [], "verification_chronology": [], "artifacts": [],
+        "evidence": [], "reviews": [], "verification_chronology": [], "artifacts": [], "instruction_changes": [],
     }
 
 
@@ -84,7 +85,7 @@ class Ledger:
         temporary.replace(self.state_path)
 
     def update(self, section: str, record: dict, *, event_kind: str | None = None) -> dict:
-        allowed = {"obligations", "blockers", "work_items", "delegated_work", "decisions", "epistemic", "evidence", "reviews", "verification_chronology", "artifacts"}
+        allowed = {"obligations", "blockers", "work_items", "delegated_work", "decisions", "epistemic", "evidence", "reviews", "verification_chronology", "artifacts", "instruction_changes"}
         if section not in allowed:
             raise ValueError(f"unsupported section: {section}")
         state = self.read()
@@ -136,6 +137,13 @@ class Ledger:
             for key in ("required_verification_scopes", "required_consumer_scopes"):
                 if not set(previous[key]) <= set(value.get(key, [])):
                     raise ValueError(f"{key} cannot be narrowed")
+            if not set(previous.get("instruction_recomposition_required", [])) <= set(value.get("instruction_recomposition_required", [])):
+                raise ValueError("instruction recomposition requirements cannot be narrowed")
+            if not set(previous.get("instruction_installation_required", [])) <= set(value.get("instruction_installation_required", [])):
+                raise ValueError("instruction installation requirements cannot be narrowed")
+            targets = value.get("instruction_recomposition_targets", {})
+            if not isinstance(targets, dict) or not all(isinstance(k, str) and isinstance(v, str) and v for k, v in targets.items()):
+                raise ValueError("instruction recomposition targets must map paths to identities")
             for key in ("scope_identities", "scope_environments"):
                 if not isinstance(value.get(key, {}), dict) or not all(isinstance(k, str) and isinstance(v, str) and v for k, v in value.get(key, {}).items()):
                     raise ValueError(f"{key} must map scopes to nonempty strings")
@@ -185,6 +193,7 @@ def _validate_record(section: str, record: dict, state: dict) -> None:
         "reviews": ("review_id", "evidence_package_hash", "reviewer_adapter", "findings", "disposition", "resolution_evidence"),
         "verification_chronology": ("chronology_index", "action", "command_or_tool", "scope", "observable_result", "evidence_ref", "status"),
         "artifacts": ("artifact_id", "semantic_role", "semantic_owner", "expected_lifetime", "current_state_role"),
+        "instruction_changes": ("artifact", "target_identity", "candidate_revision", "requirement", "owner", "outcome", "existing_principle", "integration", "displaced_guidance", "whole_file_review_ref", "active_check_ref"),
     }[section]
     missing = [key for key in required if key not in record]
     if missing:
@@ -216,3 +225,14 @@ def _validate_record(section: str, record: dict, state: dict) -> None:
         for key in ("work_item_ids", "obligation_ids"):
             if key in record and (not isinstance(record[key], list) or not all(isinstance(item, str) for item in record[key])):
                 raise ValueError(f"blocker {key} must be a list of IDs")
+    if section == "instruction_changes":
+        from .instructions import OUTCOMES
+        if record["outcome"] not in OUTCOMES:
+            raise ValueError("invalid instruction recomposition outcome")
+        for key in ("artifact", "target_identity", "candidate_revision", "requirement", "owner", "integration", "whole_file_review_ref", "active_check_ref"):
+            if not isinstance(record[key], str) or not record[key].strip():
+                raise ValueError(f"instruction {key} must be nonempty")
+        if record["outcome"] != "new_owner" and not record["existing_principle"]:
+            raise ValueError("existing principle must be identified")
+        if not isinstance(record["displaced_guidance"], list) or not all(isinstance(x, str) for x in record["displaced_guidance"]):
+            raise ValueError("displaced guidance must be a list")
