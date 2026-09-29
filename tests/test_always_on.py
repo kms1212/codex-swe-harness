@@ -12,6 +12,19 @@ from harness_v0.core import Ledger
 
 
 class AlwaysOnTests(unittest.TestCase):
+    def test_native_spawn_response_string_binds_communication_alias(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = {"session_id": "test-session-alias", "cwd": str(root), "turn_id": "turn-1"}
+            with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "ARCHIVE_HOME", root / "archive"):
+                always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Delegate work"})
+                always_on.handle({**base, "hook_event_name": "PostToolUse", "tool_name": "collaborationspawn_agent", "tool_use_id": "spawn-1",
+                                  "tool_input": {"task_name": "child"}, "tool_response": '{"task_name":"/root/child"}'})
+                always_on.handle({**base, "hook_event_name": "SubagentStart", "agent_id": "child-uuid", "agent_type": "default"})
+                delegated = Ledger(root / "sessions" / base["session_id"]).read()["delegated_work"][0]
+                self.assertEqual(delegated["aliases"], ["/root/child", "child"])
+                self.assertEqual(delegated["return_aliases"], ["/root"])
+
     def test_default_session_home_is_portable_tmp(self):
         self.assertEqual(str(always_on.STATE_HOME), "/tmp/harness-v0-sessions")
 

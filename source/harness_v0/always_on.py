@@ -114,8 +114,14 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
     raw_dir = ledger.directory / "raw-tools"
     raw_dir.mkdir(exist_ok=True)
     (raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json").write_bytes(canonical_bytes(raw))
-    if name == "collaborationspawn_agent" and isinstance(tool_input, dict) and isinstance(tool_response, dict):
-        alias = tool_response.get("task_name")
+    if name == "collaborationspawn_agent" and isinstance(tool_input, dict):
+        response_value = tool_response
+        if isinstance(response_value, str):
+            try:
+                response_value = json.loads(response_value)
+            except ValueError:
+                response_value = None
+        alias = response_value.get("task_name") if isinstance(response_value, dict) else None
         if isinstance(alias, str) and alias.startswith("/root/"):
             ledger.append_event("native_spawn_alias_available", {"alias": alias, "tool_use_id": token})
     summary = json.dumps(tool_response, ensure_ascii=False, default=str)[:800]
