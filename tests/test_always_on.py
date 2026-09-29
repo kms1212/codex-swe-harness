@@ -12,6 +12,26 @@ from harness_v0.core import Ledger
 
 
 class AlwaysOnTests(unittest.TestCase):
+    def test_default_session_home_is_portable_tmp(self):
+        self.assertEqual(str(always_on.STATE_HOME), "/tmp/harness-v0-sessions")
+
+    def test_ledger_inspection_does_not_shadow_passing_test(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base = {"session_id": "test-session-789", "cwd": str(root), "turn_id": "turn-1"}
+            with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "ARCHIVE_HOME", root / "archive"):
+                always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Run a test"})
+                for token, command, response in (
+                    ("test-pass", "python3 -m unittest discover -v", "Ran 1 test in 0.001s\n\nOK\n"),
+                    ("inspect", "python3 - <<'PY'\nprint('test verification_chronology')\nPY", "test verification_chronology"),
+                    ("fixture", "cat > /tmp/record.json <<'JSON'\n{\"command_or_tool\":\"python3 -m unittest\"}\nJSON", ""),
+                ):
+                    always_on.handle({**base, "hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_use_id": token,
+                                      "tool_input": {"command": command}, "tool_response": response})
+                entries = Ledger(root / "sessions" / base["session_id"]).read()["verification_chronology"]
+                self.assertEqual([entry["scope"] for entry in entries], ["test", "tool:Bash", "tool:Bash"])
+                self.assertEqual(entries[0]["status"], "PASS")
+
     def test_natural_prompt_tool_review_and_continuation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

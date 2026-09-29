@@ -18,10 +18,17 @@ from .review import BuiltinSubagentAdapter, build_package, route_review
 from .permissions import decide as decide_permission
 from .optimization import is_trivial_diff, review_path
 
-STATE_HOME = Path(os.environ.get("HARNESS_V0_STATE_HOME", "/private/tmp/harness-v0-sessions"))
+STATE_HOME = Path(os.environ.get("HARNESS_V0_STATE_HOME", "/tmp/harness-v0-sessions"))
 ARCHIVE_HOME = Path(os.environ.get("HARNESS_V0_ARCHIVE_HOME", str(Path.home() / ".codex/harness-v0/archive")))
 SESSION_ID = re.compile(r"[A-Za-z0-9_-]{8,128}\Z")
-TEST_WORDS = re.compile(r"(^|\W)(pytest|unittest|jest|vitest|cargo test|go test|npm test|make test)(\W|$)", re.I)
+TEST_COMMAND = re.compile(
+    r"^\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*(?:(?:\S*/)?python(?:3(?:\.\d+)?)?\s+-m\s+(?:unittest|pytest)|(?:\S*/)?(?:pytest|jest|vitest)|(?:cargo|go|npm|make)\s+test)\b",
+    re.I,
+)
+
+
+def _is_test_command(command: str) -> bool:
+    return bool(TEST_COMMAND.search(command.split("\n", 1)[0]))
 
 
 def _session(event: dict) -> Ledger | None:
@@ -119,14 +126,14 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
         elif tool_response.get("exit_code") == 0 or tool_response.get("isError") is False:
             status = "PASS"
     command = str(tool_input.get("command", tool_input.get("cmd", ""))) if isinstance(tool_input, dict) else str(tool_input)[:300]
-    if isinstance(tool_response, str) and TEST_WORDS.search(command):
+    if isinstance(tool_response, str) and _is_test_command(command):
         if re.search(r"\bFAILED\b|\b[1-9][0-9]* failed\b", tool_response):
             status = "FAIL"
         elif re.search(r"Ran \d+ tests? in [^\n]+\n\nOK\b|\b\d+ passed\b", tool_response):
             status = "PASS"
     if name in {"apply_patch", "Edit", "Write"} or re.search(r"(^|[;&| ])(touch|cp|mv|mkdir|sed -i|tee)\b|(^|[^<>])>(?!>)", command):
         ledger.append_event("artifact_write_observed", {"artifact_ref": str(raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json"), "tool_use_id": token})
-    is_test = bool(TEST_WORDS.search(command))
+    is_test = _is_test_command(command)
     scope = "test" if is_test else f"tool:{name}"
     state = ledger.read()
     index = len(state["verification_chronology"]) + 1
