@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from .completion import evaluate_and_record
 from .core import Ledger, canonical_bytes, digest, review_context_hash
 from .review import BuiltinSubagentAdapter, build_package, route_review
+from .permissions import decide as decide_permission
 
 STATE_HOME = Path(os.environ.get("HARNESS_V0_STATE_HOME", "/private/tmp/harness-v0-sessions"))
 ARCHIVE_HOME = Path(os.environ.get("HARNESS_V0_ARCHIVE_HOME", str(Path.home() / ".codex/harness-v0/archive")))
@@ -214,6 +215,14 @@ def handle(event: dict) -> dict | None:
             return _context(kind, f"SWE task ledger is {ledger.directory}. The original request and parent obligation are recorded. Maintain task state and verification as you work; the lifecycle hooks capture native tool results and enforce review/completion. No user harness command is needed.")
         if not ledger.state_path.exists():
             return None
+        if kind == "PermissionRequest":
+            if event.get("tool_name") in {"mcp__codex_app__send_message_to_thread", "send_message_to_thread", "collaboration.send_message", "collaboration.followup_task"}:
+                request_id = str(event.get("tool_use_id") or event.get("request_id") or digest(event)[:24])
+                raw_dir = ledger.directory / "raw-permissions"
+                raw_dir.mkdir(exist_ok=True)
+                (raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', request_id)}.json").write_bytes(canonical_bytes(event))
+                ledger.append_event("permission_request_observed", {"request_id": request_id, "tool_name": event.get("tool_name"), "raw_ref": str(raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', request_id)}.json")})
+            return decide_permission(event, ledger)
         if kind == "PostToolUse":
             _tool_result(event, ledger)
         elif kind == "SubagentStart":
