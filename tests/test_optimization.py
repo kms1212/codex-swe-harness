@@ -94,7 +94,9 @@ class OptimizationTests(unittest.TestCase):
             self.assertIsNone(ledger.read()["completion_state"]["pending_review_hash"])
             subprocess.run(["git", "-C", str(project), "add", "."], check=True)
             subprocess.run(["git", "-C", str(project), "-c", "user.name=CI", "-c", "user.email=ci@example.test", "commit", "-qm", "line"], check=True)
-            self.assertEqual(edited, always_on._candidate(project, ledger)[0])
+            committed, remaining, _ = always_on._candidate(project, ledger)
+            self.assertEqual(edited, committed)
+            self.assertEqual(remaining, [])
 
 
 if __name__ == "__main__":

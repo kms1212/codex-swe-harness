@@ -78,7 +78,7 @@ def _candidate(cwd: Path, ledger: Ledger) -> tuple[str, list[str], str]:
                 untracked.append((name, hashlib.sha256(content).hexdigest()))
                 untracked_diff.append(b"\n--- /dev/null\n+++ b/" + name.encode("utf-8", "replace") + b"\n" + content + b"\n")
     diff += b"".join(untracked_diff)
-    if not paths:
+    if not paths and _run_git(cwd, "rev-parse", "--is-inside-work-tree").strip() != b"true":
         writes = [event["data"] for event in ledger.events() if event["kind"] == "artifact_write_observed"]
         if writes:
             paths = [item["artifact_ref"] for item in writes]
