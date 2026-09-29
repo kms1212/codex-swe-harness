@@ -16,6 +16,7 @@ from .completion import evaluate_and_record
 from .core import Ledger, canonical_bytes, digest, review_context_hash
 from .review import BuiltinSubagentAdapter, build_package, route_review
 from .permissions import decide as decide_permission
+from .optimization import is_trivial_diff, review_path
 
 STATE_HOME = Path(os.environ.get("HARNESS_V0_STATE_HOME", "/private/tmp/harness-v0-sessions"))
 ARCHIVE_HOME = Path(os.environ.get("HARNESS_V0_ARCHIVE_HOME", str(Path.home() / ".codex/harness-v0/archive")))
@@ -82,7 +83,18 @@ def _candidate(cwd: Path, ledger: Ledger) -> tuple[str, list[str], str]:
         if writes:
             paths = [item["artifact_ref"] for item in writes]
             diff = canonical_bytes(writes)
-    revision = digest({"status": status.decode("utf-8", "replace"), "diff_sha256": hashlib.sha256(diff).hexdigest(), "untracked": untracked})
+    tracked = _run_git(cwd, "ls-files", "-co", "--exclude-standard", "-z")
+    content = []
+    for raw_name in tracked.split(b"\0"):
+        if not raw_name:
+            continue
+        name = raw_name.decode("utf-8", "replace")
+        file_path = cwd / name
+        if file_path.is_file() and not file_path.is_symlink():
+            content.append((name, hashlib.sha256(file_path.read_bytes()).hexdigest()))
+        elif file_path.is_symlink():
+            content.append((name, "symlink:" + os.readlink(file_path)))
+    revision = digest(sorted(content)) if content else digest({"status": status.decode("utf-8", "replace"), "diff_sha256": hashlib.sha256(diff).hexdigest(), "untracked": untracked})
     return revision, paths, diff.decode("utf-8", "replace")
 
 
@@ -95,6 +107,10 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
     raw_dir = ledger.directory / "raw-tools"
     raw_dir.mkdir(exist_ok=True)
     (raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json").write_bytes(canonical_bytes(raw))
+    if name == "collaborationspawn_agent" and isinstance(tool_input, dict) and isinstance(tool_response, dict):
+        alias = tool_response.get("task_name")
+        if isinstance(alias, str) and alias.startswith("/root/"):
+            ledger.append_event("native_spawn_alias_available", {"alias": alias, "tool_use_id": token})
     summary = json.dumps(tool_response, ensure_ascii=False, default=str)[:800]
     status = "UNKNOWN"
     if isinstance(tool_response, dict):
@@ -110,13 +126,18 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
             status = "PASS"
     if name in {"apply_patch", "Edit", "Write"} or re.search(r"(^|[;&| ])(touch|cp|mv|mkdir|sed -i|tee)\b|(^|[^<>])>(?!>)", command):
         ledger.append_event("artifact_write_observed", {"artifact_ref": str(raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json"), "tool_use_id": token})
-    scope = "test" if TEST_WORDS.search(command) else f"tool:{name}"
+    is_test = bool(TEST_WORDS.search(command))
+    scope = "test" if is_test else f"tool:{name}"
     state = ledger.read()
     index = len(state["verification_chronology"]) + 1
     ref = f"tool:{token}"
     revision = state["completion_state"].get("candidate_revision") or _candidate(Path(event.get("cwd") or os.getcwd()), ledger)[0]
-    ledger.update("verification_chronology", {"chronology_index": index, "action": "native tool result", "command_or_tool": command[:500] or name,
-        "scope": scope, "observable_result": summary, "evidence_ref": ref, "status": status, "artifact_revision": revision})
+    verification = {"chronology_index": index, "action": "native tool result", "command_or_tool": command[:500] or name,
+        "scope": scope, "observable_result": summary, "evidence_ref": ref, "status": status, "artifact_revision": revision}
+    if is_test:
+        verification.update(target_identity=_candidate(Path(event.get("cwd") or os.getcwd()), ledger)[0],
+                            related_inputs=["repository"], execution_environment=sys.platform, expensive=True)
+    ledger.update("verification_chronology", verification)
     ledger.update("evidence", {"evidence_id": ref, "producer": name, "operation": command[:500] or name,
         "observable_result": summary, "scope": scope, "chronology_index": index, "artifact_refs": [str(raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json")]})
 
@@ -164,14 +185,21 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
     revision = state["completion_state"].get("candidate_revision")
     change_types = _route(paths)
     if change_types:
-        routing = route_review(change_types, semantic_risk=True)
+        risk = len(paths) > 3 or any(kind in {"architecture", "integration"} for kind in change_types)
+        path = review_path(change_types, deterministic=is_trivial_diff(paths, diff), semantic_risk=risk)
+        routing = route_review(change_types, semantic_risk=path == "semantic_review")
+        if path != "semantic_review":
+            routing["required"] = False
+        if not any(e["kind"] == "optimization_choice" and e["data"].get("fingerprint") == fingerprint for e in ledger.events()):
+            ledger.append_event("optimization_choice", {"action": path, "reason": "change scope and semantic risk", "fingerprint": fingerprint,
+                "changed_paths": paths, "reusable_evidence": [], "new_evidence": state["completion_state"].get("required_verification_scopes", []), "parallel": False})
         if routing["required"] and not state["completion_state"]["semantic_review_required"]:
             state["completion_state"]["semantic_review_required"] = True
             ledger._write_state(state)
             ledger.append_event("review_routed", routing)
             state = ledger.read()
         latest = state["reviews"][-1] if state["reviews"] else None
-        if not state["completion_state"]["pending_review_hash"] and (not latest or latest.get("candidate_revision") != revision or latest.get("artifact_fingerprint") != fingerprint or latest.get("review_context_hash") != review_context_hash(state)):
+        if (routing["required"] or state["completion_state"]["semantic_review_required"]) and not state["completion_state"]["pending_review_hash"] and (not latest or latest.get("candidate_revision") != revision or latest.get("artifact_fingerprint") != fingerprint or latest.get("review_context_hash") != review_context_hash(state)):
             package = build_package(state, routing, {"artifact_refs": paths, "aggregate_diff": diff, "resulting_state": paths}, paths)
             request = BuiltinSubagentAdapter(ledger).prepare(package)
             message = ("The SWE harness prepared a frozen semantic review package. Spawn one fresh built-in subagent now as a read-only semantic evaluator. "
@@ -216,7 +244,7 @@ def handle(event: dict) -> dict | None:
         if not ledger.state_path.exists():
             return None
         if kind == "PermissionRequest":
-            if event.get("tool_name") in {"mcp__codex_app__send_message_to_thread", "send_message_to_thread", "collaboration.send_message", "collaboration.followup_task"}:
+            if event.get("tool_name") in {"mcp__codex_app__send_message_to_thread", "send_message_to_thread", "collaboration.send_message", "collaboration.followup_task", "collaborationsend_message", "collaborationfollowup_task"}:
                 request_id = str(event.get("tool_use_id") or event.get("request_id") or digest(event)[:24])
                 raw_dir = ledger.directory / "raw-permissions"
                 raw_dir.mkdir(exist_ok=True)
@@ -229,6 +257,10 @@ def handle(event: dict) -> dict | None:
             agent_id = str(event.get("agent_id") or "")
             ledger.append_event("native_subagent_started", {"agent_id": agent_id, "agent_type": event.get("agent_type"), "turn_id": event.get("turn_id")})
             if agent_id and not ledger.read()["completion_state"].get("pending_review_hash"):
+                available = [item["data"]["alias"] for item in ledger.events() if item["kind"] == "native_spawn_alias_available"]
+                assigned = {alias for work in ledger.read()["delegated_work"] for alias in work.get("aliases", []) if alias.startswith("/root/")}
+                unassigned = [alias for alias in available if alias not in assigned]
+                alias = unassigned[0] if len(unassigned) == 1 else None
                 work_id = "native-" + re.sub(r"[^A-Za-z0-9_-]", "_", agent_id)
                 if not any(item["work_item_id"] == work_id for item in ledger.read()["work_items"]):
                     ledger.update("work_items", {"work_item_id": work_id, "parent_id": ledger.read()["task_id"],
@@ -237,7 +269,9 @@ def handle(event: dict) -> dict | None:
                         "remaining_issues": [], "integration_notes": "Await native result and parent integration"})
                     ledger.update("delegated_work", {"id": work_id, "work_item_id": work_id, "owner": agent_id,
                         "expected_result": "native subagent result", "return_destination": ledger.read()["task_id"],
-                        "status": "DISPATCHED", "result_refs": [], "consumed_refs": [], "integration_refs": []})
+                        "status": "DISPATCHED", "result_refs": [], "consumed_refs": [], "integration_refs": [],
+                        "aliases": [alias, alias.rsplit("/", 1)[-1]] if alias else [],
+                        "return_aliases": [alias.rsplit("/", 1)[0]] if alias else []})
         elif kind == "SubagentStop":
             message = event.get("last_assistant_message") or ""
             result = _parse_result(message)

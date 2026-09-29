@@ -2,10 +2,16 @@
 from __future__ import annotations
 
 from .core import Ledger, review_context_hash
+from .optimization import duplicate_expensive_action, parallelizable, running_work_value, verification_reusable
 
 
 def _latest_verification(state: dict, scope: str) -> dict | None:
-    matches = [entry for entry in state["verification_chronology"] if entry["scope"] == scope]
+    completion = state["completion_state"]
+    identity = completion.get("scope_identities", {}).get(scope)
+    environment = completion.get("scope_environments", {}).get(scope)
+    matches = [entry for entry in state["verification_chronology"] if entry["scope"] == scope
+               and (identity is None or entry.get("target_identity") == identity)
+               and (environment is None or entry.get("execution_environment") == environment)]
     return matches[-1] if matches else None
 
 
@@ -55,13 +61,13 @@ def evaluate_completion(state: dict) -> dict:
             reasons.append({"code": "OBLIGATION_EVIDENCE_UNKNOWN", "id": obligation["id"]})
     for scope in completion["required_verification_scopes"]:
         latest = _latest_verification(state, scope)
-        if not latest or latest["status"] != "PASS" or latest.get("artifact_revision") != revision:
+        if not verification_reusable(latest, completion.get("scope_identities", {}).get(scope), revision, completion.get("scope_environments", {}).get(scope)):
             reasons.append({"code": "VERIFICATION_MISSING_OR_FAILING", "scope": scope})
         else:
             evidence_refs.add(latest["evidence_ref"])
     for scope in completion["required_consumer_scopes"]:
         latest = _latest_verification(state, scope)
-        if not latest or latest["status"] != "PASS" or not latest.get("consumer_point") or latest.get("artifact_revision") != revision:
+        if not verification_reusable(latest, completion.get("scope_identities", {}).get(scope), revision, completion.get("scope_environments", {}).get(scope)) or not latest.get("consumer_point"):
             reasons.append({"code": "CONSUMER_EVIDENCE_MISSING", "scope": scope})
         else:
             evidence_refs.add(latest["evidence_ref"])
@@ -123,7 +129,15 @@ def progress_snapshot(state: dict) -> dict:
     for previous, current in zip(history, history[1:]):
         if previous["command_or_tool"] == current["command_or_tool"] and previous["scope"] == current["scope"] and previous["observable_result"] == current["observable_result"]:
             repetitions.append([previous["chronology_index"], current["chronology_index"]])
+    redundant = []
+    for index, entry in enumerate(history):
+        prior = duplicate_expensive_action(history[:index], entry)
+        if prior:
+            redundant.append([prior["chronology_index"], entry["chronology_index"]])
+    running = {item["work_item_id"]: running_work_value(item, history) for item in state["work_items"] if item["status"] == "ACTIVE"}
+    parallel_pairs = [[left["work_item_id"], right["work_item_id"]] for i, left in enumerate(actions) for right in actions[i + 1:] if parallelizable(left, right)]
     return {"authorized_remaining_work": [x["id"] for x in state["obligations"] if x["status"] != "SATISFIED"],
             "available_next_actions": [x["work_item_id"] for x in actions],
             "unresolved_blockers": [x["id"] for x in state["blockers"] if x.get("status") != "RESOLVED"],
-            "repeated_actions": repetitions}
+            "repeated_actions": repetitions, "duplicate_expensive_actions": redundant,
+            "running_work_value": running, "parallelizable_pairs": parallel_pairs}

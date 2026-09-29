@@ -28,7 +28,7 @@ def review_context_hash(state: dict) -> str:
         "integration_state": state["integration_state"],
         "blockers": state["blockers"],
         "artifacts": state["artifacts"],
-        "completion_requirements": {key: state["completion_state"][key] for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required")},
+        "completion_requirements": {key: state["completion_state"].get(key) for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required", "scope_identities", "scope_environments")},
     })
 
 
@@ -40,7 +40,7 @@ def initial_state(task_id: str, objective: str, original_request: str) -> dict:
         "original_request": original_request, "obligations": [], "blockers": [],
         "work_items": [], "delegated_work": [],
         "integration_state": {"candidate_changes": [], "integrated_changes": [], "conflicts": [], "unresolved_dependencies": [], "verification_refs": [], "consumer_refs": [], "artifact_refs": []},
-        "completion_state": {"status": "CONTINUE", "candidate_revision": None, "pending_review_hash": None, "required_verification_scopes": [], "required_consumer_scopes": [], "semantic_review_required": False, "evidence_refs": []},
+        "completion_state": {"status": "CONTINUE", "candidate_revision": None, "pending_review_hash": None, "required_verification_scopes": [], "required_consumer_scopes": [], "scope_identities": {}, "scope_environments": {}, "semantic_review_required": False, "evidence_refs": []},
         "decisions": [], "epistemic": [],
         "authority": {"policy_model": "unspecified", "default_admissibility": None, "closure": None, "capabilities": [], "constraints": [], "exceptions": [], "scope": "task", "side_effect_scope": [], "delegation_scope": []},
         "evidence": [], "reviews": [], "verification_chronology": [], "artifacts": [],
@@ -136,6 +136,9 @@ class Ledger:
             for key in ("required_verification_scopes", "required_consumer_scopes"):
                 if not set(previous[key]) <= set(value.get(key, [])):
                     raise ValueError(f"{key} cannot be narrowed")
+            for key in ("scope_identities", "scope_environments"):
+                if not isinstance(value.get(key, {}), dict) or not all(isinstance(k, str) and isinstance(v, str) and v for k, v in value.get(key, {}).items()):
+                    raise ValueError(f"{key} must map scopes to nonempty strings")
             if value.get("status") == "COMPLETE":
                 raise ValueError("only the completion evaluator can record COMPLETE")
         state[section] = value
@@ -201,6 +204,11 @@ def _validate_record(section: str, record: dict, state: dict) -> None:
             raise ValueError("verification chronology must be contiguous")
         if record["status"] not in {"PASS", "FAIL", "UNKNOWN"}:
             raise ValueError("invalid verification status")
+        if "related_inputs" in record and (not isinstance(record["related_inputs"], list) or not all(isinstance(x, str) for x in record["related_inputs"])):
+            raise ValueError("related_inputs must be a list of paths or contracts")
+        for key in ("target_identity", "execution_environment"):
+            if key in record and (not isinstance(record[key], str) or not record[key]):
+                raise ValueError(f"{key} must be a nonempty string")
     if section == "evidence":
         if record["chronology_index"] < 1:
             raise ValueError("invalid chronology index")

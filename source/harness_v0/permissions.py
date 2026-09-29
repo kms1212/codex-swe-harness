@@ -8,6 +8,8 @@ COMMUNICATION_TOOLS = {
     "send_message_to_thread": "message",
     "collaboration.send_message": "message",
     "collaboration.followup_task": "followup",
+    "collaborationsend_message": "message",
+    "collaborationfollowup_task": "followup",
 }
 
 
@@ -28,19 +30,18 @@ def decide(event: dict, ledger: Ledger) -> dict | None:
     if not sender or not recipient or not payload:
         return None
     state = ledger.read()
-    matched = None
-    direction = None
+    matches = []
     for work in state["delegated_work"]:
         if work["status"] != "DISPATCHED":
             continue
-        if sender == state["task_id"] and recipient == work["owner"]:
-            matched, direction = work, "to_worker"
-            break
-        if sender == work["owner"] and recipient == work["return_destination"]:
-            matched, direction = work, "to_parent"
-            break
-    if matched is None:
+        destinations = {work["owner"], *work.get("aliases", [])}
+        if sender == state["task_id"] and recipient in destinations:
+            matches.append((work, "to_worker"))
+        if sender in destinations and recipient in {work["return_destination"], *work.get("return_aliases", [])}:
+            matches.append((work, "to_parent"))
+    if len(matches) != 1:
         return None
+    matched, direction = matches[0]
     request_id = _identity(event.get("tool_use_id")) or _identity(event.get("request_id")) or digest({"turn_id": event.get("turn_id"), "tool": tool, "input": args})[:24]
     ledger.append_event("delegated_communication_approved", {
         "request_id": request_id, "communication_kind": kind, "direction": direction,

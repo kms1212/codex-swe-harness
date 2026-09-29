@@ -8,6 +8,8 @@ This is a supervisory control layer around Codex's native execution. Codex still
 
 The dependency direction is task state → frozen package → reviewer finding → execution repair → verification → completion. Reviewer output cannot mutate the artifact. A native child identity is evidence of activation, not correctness. No model verdict alone marks a parent complete.
 
+Verification validity is scoped to content and environment. `verification_chronology` owns the check, target identity, related inputs, environment, result, and chronology; `completion_state` names the identities required for current scopes. Commit-only transitions preserve source content identity. `optimization.py` computes impacted checks, detects duplicate expensive work, evaluates running work value and safe parallel pairs, and selects the review path. The native Stop hook uses the path selection when deciding whether to freeze a semantic review package.
+
 ## Ownership and lifetime
 
 Harness-owned transient state includes next work, blockers, delegation, review requests, and integration progress. Product-owned durable state includes architecture, API contracts, configuration, and deliverables. History-owned evidence includes prior decisions, supersession, and the event log. `artifact_context` declares owner and expected lifetime so the reviewer can detect F062-style leakage of temporary work status into durable design.

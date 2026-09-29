@@ -83,17 +83,19 @@ class PermissionTests(unittest.TestCase):
             ledger = Ledger(Path(directory))
             ledger.create("parent-thread", "task", "task")
             ledger.update("work_items", {"work_item_id": "work-1", "parent_id": "parent-thread", "objective": "child work", "owner": "child-thread", "status": "ACTIVE", "dependencies": [], "produced_changes": [], "verification_refs": [], "evidence_refs": [], "remaining_issues": [], "integration_notes": ""})
-            ledger.update("delegated_work", {"id": "work-1", "work_item_id": "work-1", "owner": "child-thread", "expected_result": "answer", "return_destination": "parent-thread", "status": "DISPATCHED", "result_refs": [], "consumed_refs": [], "integration_refs": []})
+            ledger.update("delegated_work", {"id": "work-1", "work_item_id": "work-1", "owner": "child-thread", "expected_result": "answer", "return_destination": "parent-thread", "status": "DISPATCHED", "result_refs": [], "consumed_refs": [], "integration_refs": [], "aliases": ["/root/child", "child"], "return_aliases": ["/root"]})
             base = {"hook_event_name": "PermissionRequest", "tool_name": "mcp__codex_app__send_message_to_thread", "session_id": "parent-thread", "tool_use_id": "request-1"}
             outgoing = {**base, "tool_input": {"threadId": "child-thread", "prompt": "Please check this."}}
             self.assertEqual(decide(outgoing, ledger)["hookSpecificOutput"]["decision"], {"behavior": "allow"})
             returned = {**base, "agent_id": "child-thread", "tool_use_id": "request-2", "tool_input": {"threadId": "parent-thread", "prompt": "Checked; here is the result."}}
             self.assertIsNotNone(decide(returned, ledger))
+            self.assertIsNotNone(decide({**base, "tool_name": "collaborationsend_message", "tool_input": {"target": "child", "message": "Follow up"}}, ledger))
+            self.assertIsNotNone(decide({**base, "tool_name": "collaborationsend_message", "agent_id": "child-thread", "tool_input": {"target": "/root", "message": "Result"}}, ledger))
             self.assertIsNone(decide({**base, "tool_input": {"threadId": "stranger", "prompt": "hello"}}, ledger))
             self.assertIsNone(decide({**base, "tool_input": {"threadId": "child-thread"}}, ledger))
             self.assertIsNone(decide({**base, "tool_input": "broken"}, ledger))
             events = [e for e in ledger.events() if e["kind"] == "delegated_communication_approved"]
-            self.assertEqual([e["data"]["request_id"] for e in events], ["request-1", "request-2"])
+            self.assertEqual([e["data"]["request_id"] for e in events[:2]], ["request-1", "request-2"])
             ledger.transition("delegated_work", "work-1", {"status": "RETURNED", "result_refs": ["request-2"]}, ["request-2"])
             self.assertIsNone(decide(outgoing, ledger))
 

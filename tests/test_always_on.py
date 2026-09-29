@@ -88,6 +88,7 @@ class AlwaysOnTests(unittest.TestCase):
                     "tool_input": {"command": "python3 -m unittest discover -s tests -v"},
                     "tool_response": "Ran 3 tests in 0.001s\n\nFAILED (failures=1)\n"})
                 self.assertEqual([item["status"] for item in ledger.read()["verification_chronology"][-2:]], ["PASS", "FAIL"])
+                self.assertTrue(all(item["expensive"] and item["target_identity"] for item in ledger.read()["verification_chronology"][-2:]))
 
 
 if __name__ == "__main__":
