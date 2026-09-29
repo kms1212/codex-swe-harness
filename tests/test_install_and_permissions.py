@@ -59,6 +59,9 @@ class InstructionTests(unittest.TestCase):
             first_content = (home / "AGENTS.md").read_text()
             self.assertEqual(first["host_os"], "Darwin")
             self.assertEqual(first["revision"], subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip())
+            generated = source / "source" / "harness_v0.egg-info"
+            generated.mkdir(exist_ok=True)
+            (generated / "PKG-INFO").write_text("generated metadata")
             second = installer.install(source, home, "Darwin")
             self.assertEqual(first_content, (home / "AGENTS.md").read_text())
             self.assertEqual(second["revision"], first["revision"])
