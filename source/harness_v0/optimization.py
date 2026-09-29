@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Iterable
 
 
-def verification_reusable(entry: dict | None, expected_identity: str | None, candidate_revision: str | None, environment: str | None = None) -> bool:
+def verification_reusable(entry: dict | None, expected_identity: str | None, candidate_revision: str | None, environment: str | None = None, input_identities: dict[str, str] | None = None) -> bool:
     if not entry or entry.get("status") != "PASS":
         return False
     if expected_identity is not None:
@@ -13,6 +13,8 @@ def verification_reusable(entry: dict | None, expected_identity: str | None, can
     elif entry.get("artifact_revision") != candidate_revision:
         return False
     if environment is not None and entry.get("execution_environment") != environment:
+        return False
+    if entry.get("related_inputs") and (input_identities is None or entry.get("input_identities") != input_identities or set(input_identities) != set(entry["related_inputs"])):
         return False
     return True
 
@@ -30,6 +32,8 @@ def select_checks(changed_inputs: Iterable[str], checks: Iterable[dict]) -> list
 def review_path(change_types: list[str], *, deterministic: bool = False, semantic_risk: bool = False) -> str:
     if semantic_risk or "architecture" in change_types or "integration" in change_types:
         return "semantic_review"
+    if "code" in change_types:
+        return "scoped_checks" if len(change_types) == 1 else "semantic_review"
     if deterministic and len(change_types) == 1:
         return "lightweight"
     if "documentation" in change_types or "user_artifact" in change_types:
@@ -48,7 +52,7 @@ def duplicate_expensive_action(history: Iterable[dict], proposed: dict) -> dict 
     if not proposed.get("expensive"):
         return None
     for prior in reversed(list(history)):
-        if all(prior.get(key) == proposed.get(key) for key in ("command_or_tool", "scope", "target_identity", "execution_environment")) and prior.get("status") == "PASS":
+        if all(prior.get(key) == proposed.get(key) for key in ("command_or_tool", "scope", "target_identity", "input_identities", "execution_environment")) and prior.get("status") == "PASS":
             return prior
     return None
 
@@ -59,7 +63,7 @@ def running_work_value(work: dict, available_evidence: Iterable[dict]) -> str:
         return "not_running"
     target = work.get("target_identity")
     scope = work.get("verification_scope")
-    if target and scope and any(item.get("scope") == scope and item.get("target_identity") == target and item.get("status") == "PASS" for item in available_evidence):
+    if target and scope and any(item.get("scope") == scope and item.get("target_identity") == target and item.get("input_identities") == work.get("input_identities") and item.get("status") == "PASS" for item in available_evidence):
         return "cancel_if_possible" if work.get("cancelable", False) else "ignore_duplicate_result"
     return "continue"
 

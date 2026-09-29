@@ -10,9 +10,11 @@ def _latest_verification(state: dict, scope: str) -> dict | None:
     completion = state["completion_state"]
     identity = completion.get("scope_identities", {}).get(scope)
     environment = completion.get("scope_environments", {}).get(scope)
+    inputs = completion.get("scope_input_identities", {}).get(scope)
     matches = [entry for entry in state["verification_chronology"] if entry["scope"] == scope
                and (identity is None or entry.get("target_identity") == identity)
-               and (environment is None or entry.get("execution_environment") == environment)]
+               and (environment is None or entry.get("execution_environment") == environment)
+               and (inputs is None or entry.get("input_identities") == inputs)]
     return matches[-1] if matches else None
 
 
@@ -62,13 +64,13 @@ def evaluate_completion(state: dict) -> dict:
             reasons.append({"code": "OBLIGATION_EVIDENCE_UNKNOWN", "id": obligation["id"]})
     for scope in completion["required_verification_scopes"]:
         latest = _latest_verification(state, scope)
-        if not verification_reusable(latest, completion.get("scope_identities", {}).get(scope), revision, completion.get("scope_environments", {}).get(scope)):
+        if not verification_reusable(latest, completion.get("scope_identities", {}).get(scope), revision, completion.get("scope_environments", {}).get(scope), completion.get("scope_input_identities", {}).get(scope)):
             reasons.append({"code": "VERIFICATION_MISSING_OR_FAILING", "scope": scope})
         else:
             evidence_refs.add(latest["evidence_ref"])
     for scope in completion["required_consumer_scopes"]:
         latest = _latest_verification(state, scope)
-        if not verification_reusable(latest, completion.get("scope_identities", {}).get(scope), revision, completion.get("scope_environments", {}).get(scope)) or not latest.get("consumer_point"):
+        if not verification_reusable(latest, completion.get("scope_identities", {}).get(scope), revision, completion.get("scope_environments", {}).get(scope), completion.get("scope_input_identities", {}).get(scope)) or not latest.get("consumer_point"):
             reasons.append({"code": "CONSUMER_EVIDENCE_MISSING", "scope": scope})
         else:
             evidence_refs.add(latest["evidence_ref"])

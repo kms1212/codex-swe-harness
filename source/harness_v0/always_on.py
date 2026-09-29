@@ -182,7 +182,8 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
         "scope": scope, "observable_result": summary, "evidence_ref": ref, "status": status, "artifact_revision": revision}
     if is_test:
         verification.update(target_identity=observed_revision,
-                            related_inputs=["repository"], execution_environment=sys.platform, expensive=True)
+                            related_inputs=["repository"], input_identities={"repository": observed_revision},
+                            execution_environment=sys.platform, expensive=True)
     ledger.update("verification_chronology", verification)
     ledger.update("evidence", {"evidence_id": ref, "producer": name, "operation": command[:500] or name,
         "observable_result": summary, "scope": scope, "chronology_index": index, "artifact_refs": [str(raw_dir / f"{re.sub('[^A-Za-z0-9_-]', '_', token)}.json")]})

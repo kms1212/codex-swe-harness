@@ -29,7 +29,7 @@ def review_context_hash(state: dict) -> str:
         "blockers": state["blockers"],
         "artifacts": state["artifacts"],
         "instruction_changes": state.get("instruction_changes", []),
-        "completion_requirements": {key: state["completion_state"].get(key) for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required", "scope_identities", "scope_environments", "instruction_recomposition_required", "instruction_recomposition_targets", "instruction_installation_required", "instruction_source_revision")},
+        "completion_requirements": {key: state["completion_state"].get(key) for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required", "scope_identities", "scope_environments", "scope_input_identities", "instruction_recomposition_required", "instruction_recomposition_targets", "instruction_installation_required", "instruction_source_revision")},
     })
 
 
@@ -41,7 +41,7 @@ def initial_state(task_id: str, objective: str, original_request: str) -> dict:
         "original_request": original_request, "obligations": [], "blockers": [],
         "work_items": [], "delegated_work": [],
         "integration_state": {"candidate_changes": [], "integrated_changes": [], "conflicts": [], "unresolved_dependencies": [], "verification_refs": [], "consumer_refs": [], "artifact_refs": []},
-        "completion_state": {"status": "CONTINUE", "candidate_revision": None, "pending_review_hash": None, "required_verification_scopes": [], "required_consumer_scopes": [], "scope_identities": {}, "scope_environments": {}, "semantic_review_required": False, "instruction_recomposition_required": [], "instruction_recomposition_targets": {}, "instruction_installation_required": [], "instruction_source_revision": None, "evidence_refs": []},
+        "completion_state": {"status": "CONTINUE", "candidate_revision": None, "pending_review_hash": None, "required_verification_scopes": [], "required_consumer_scopes": [], "scope_identities": {}, "scope_environments": {}, "scope_input_identities": {}, "semantic_review_required": False, "instruction_recomposition_required": [], "instruction_recomposition_targets": {}, "instruction_installation_required": [], "instruction_source_revision": None, "evidence_refs": []},
         "decisions": [], "epistemic": [],
         "authority": {"policy_model": "unspecified", "default_admissibility": None, "closure": None, "capabilities": [], "constraints": [], "exceptions": [], "scope": "task", "side_effect_scope": [], "delegation_scope": []},
         "evidence": [], "reviews": [], "verification_chronology": [], "artifacts": [], "instruction_changes": [],
@@ -147,6 +147,9 @@ class Ledger:
             for key in ("scope_identities", "scope_environments"):
                 if not isinstance(value.get(key, {}), dict) or not all(isinstance(k, str) and isinstance(v, str) and v for k, v in value.get(key, {}).items()):
                     raise ValueError(f"{key} must map scopes to nonempty strings")
+            inputs = value.get("scope_input_identities", {})
+            if not isinstance(inputs, dict) or not all(isinstance(scope, str) and isinstance(identities, dict) and all(isinstance(k, str) and isinstance(v, str) and v for k, v in identities.items()) for scope, identities in inputs.items()):
+                raise ValueError("scope input identities must map scopes to input identity maps")
             if value.get("status") == "COMPLETE":
                 raise ValueError("only the completion evaluator can record COMPLETE")
         state[section] = value
@@ -218,6 +221,8 @@ def _validate_record(section: str, record: dict, state: dict) -> None:
         for key in ("target_identity", "execution_environment"):
             if key in record and (not isinstance(record[key], str) or not record[key]):
                 raise ValueError(f"{key} must be a nonempty string")
+        if "input_identities" in record and (not isinstance(record["input_identities"], dict) or not all(isinstance(k, str) and isinstance(v, str) and v for k, v in record["input_identities"].items())):
+            raise ValueError("input identities must map inputs to nonempty identities")
     if section == "evidence":
         if record["chronology_index"] < 1:
             raise ValueError("invalid chronology index")
