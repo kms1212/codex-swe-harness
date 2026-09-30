@@ -78,6 +78,10 @@ class OptimizationTests(unittest.TestCase):
         selection_state = state_for()
         selection_state["verification_chronology"] = [passed | {"evidence_ref": "existing"}]
         self.assertEqual(select_next_actions(selection_state, proposed)["proposed_action"], {"decision": "reuse", "evidence_ref": "existing"})
+        failed = {**passed, "chronology_index": 2, "status": "FAIL", "evidence_ref": "latest-fail"}
+        self.assertIsNone(duplicate_expensive_action([passed, failed], proposed))
+        selection_state["verification_chronology"].append(failed)
+        self.assertEqual(select_next_actions(selection_state, proposed)["proposed_action"], {"decision": "run", "evidence_ref": None})
         self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "target_identity": "tree-B"}))
         self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "input_identities": {"shared-contract": "changed"}}))
         self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "repeat_reason": "new_hypothesis"}))

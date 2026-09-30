@@ -54,8 +54,8 @@ def duplicate_expensive_action(history: Iterable[dict], proposed: dict) -> dict 
     if proposed.get("repeat_reason") in {"new_evidence", "new_hypothesis", "prior_result_followup"}:
         return None
     for prior in reversed(list(history)):
-        if all(prior.get(key) == proposed.get(key) for key in ("command_or_tool", "scope", "target_identity", "input_identities", "execution_environment")) and prior.get("status") == "PASS":
-            return prior
+        if all(prior.get(key) == proposed.get(key) for key in ("command_or_tool", "scope", "target_identity", "input_identities", "execution_environment")):
+            return prior if prior.get("status") == "PASS" else None
     return None
 
 
