@@ -93,7 +93,13 @@ def evaluate_completion(state: dict) -> dict:
                 reasons.append({"code": "BLOCKING_FINDING_UNRESOLVED", "review_id": review["review_id"], "finding_index": index})
             if finding.get("disposition") in {"accepted", "partially_accepted"}:
                 finding_key = f"{review['review_id']}:{index}"
-                later_pass_refs = {entry["evidence_ref"] for entry in state["verification_chronology"] if entry["status"] == "PASS" and entry["chronology_index"] > review.get("verification_cutoff_index", -1) and entry.get("artifact_revision") == revision and finding_key in entry.get("resolves", []) and (finding["criterion"] != 14 or entry.get("consumer_point"))}
+                later_pass_refs = {entry["evidence_ref"] for entry in state["verification_chronology"]
+                                   if entry["chronology_index"] > review.get("verification_cutoff_index", -1)
+                                   and finding_key in entry.get("resolves", [])
+                                   and (finding["criterion"] != 14 or entry.get("consumer_point"))
+                                   and verification_reusable(entry, completion.get("scope_identities", {}).get(entry["scope"]), revision,
+                                                             completion.get("scope_environments", {}).get(entry["scope"]),
+                                                             completion.get("scope_input_identities", {}).get(entry["scope"]))}
                 if not set(finding.get("resolution_evidence", [])) & later_pass_refs:
                     reasons.append({"code": "REPAIR_VERIFICATION_MISSING", "review_id": review["review_id"], "finding_index": index})
         if review["disposition"] != "RESOLVED":

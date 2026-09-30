@@ -12,6 +12,55 @@ from harness_v0.core import Ledger
 
 
 class AlwaysOnTests(unittest.TestCase):
+    def test_preexisting_instruction_edit_is_not_routed_after_unrelated_code_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "project"
+            project.mkdir()
+            subprocess.run(["git", "init", "-q", str(project)], check=True)
+            (project / "code.py").write_text("value = 1\n")
+            subprocess.run(["git", "-C", str(project), "add", "code.py"], check=True)
+            subprocess.run(["git", "-C", str(project), "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "-qm", "base"], check=True)
+            (project / "AGENTS.md").write_text("Preexisting local instruction\n")
+            base = {"session_id": "test-session-dirty-instruction", "cwd": str(project), "turn_id": "turn-1"}
+            with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "ARCHIVE_HOME", root / "archive"):
+                always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Update code only"})
+                (project / "code.py").write_text("value = 2\n")
+                always_on.handle({**base, "hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_use_id": "edit-1",
+                                  "tool_input": {"command": "write code.py"}, "tool_response": {"exit_code": 0, "output": "updated"}})
+                always_on.handle({**base, "hook_event_name": "Stop", "stop_hook_active": False})
+                ledger = Ledger(root / "sessions" / base["session_id"])
+                self.assertEqual(ledger.read()["completion_state"]["instruction_recomposition_required"], [])
+                self.assertFalse(any(event["kind"] == "review_requested" for event in ledger.events()))
+
+    def test_pasted_request_attachment_content_enters_ledger(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            attached = root / ".codex/attachments/1234/Pasted text.txt"
+            attached.parent.mkdir(parents=True)
+            attached.write_text("The substantive SWE request.\n")
+            prompt = f"## Request: {attached}\nPasted text contains the user's request."
+            with patch.object(always_on.Path, "home", return_value=root):
+                resolved = always_on._resolved_request(prompt)
+            self.assertIn("The substantive SWE request.", resolved)
+            self.assertIn(prompt, resolved)
+
+    def test_preexisting_dirty_files_do_not_create_review_for_read_only_turn(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            project = root / "project"
+            project.mkdir()
+            subprocess.run(["git", "init", "-q", str(project)], check=True)
+            (project / "preexisting.txt").write_text("fixture\n")
+            base = {"session_id": "test-session-read-only", "cwd": str(project), "turn_id": "turn-1"}
+            with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "ARCHIVE_HOME", root / "archive"):
+                always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Inspect the existing fixture"})
+                always_on.handle({**base, "hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_use_id": "read-1",
+                                  "tool_input": {"command": "cat preexisting.txt"}, "tool_response": {"exit_code": 0, "output": "fixture"}})
+                self.assertIsNone(always_on.handle({**base, "hook_event_name": "Stop", "stop_hook_active": False}))
+                ledger = Ledger(root / "sessions" / base["session_id"])
+                self.assertFalse(any(event["kind"] == "review_requested" for event in ledger.events()))
+
     def test_native_spawn_response_string_binds_communication_alias(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

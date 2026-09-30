@@ -139,8 +139,9 @@ class Ledger:
                     raise ValueError(f"{key} cannot be narrowed")
             if not set(previous.get("instruction_recomposition_required", [])) <= set(value.get("instruction_recomposition_required", [])):
                 raise ValueError("instruction recomposition requirements cannot be narrowed")
-            if not set(previous.get("instruction_installation_required", [])) <= set(value.get("instruction_installation_required", [])):
-                raise ValueError("instruction installation requirements cannot be narrowed")
+            global_installation = {path for path in previous.get("instruction_installation_required", []) if path.startswith("runtime/instructions/")}
+            if not global_installation <= set(value.get("instruction_installation_required", [])):
+                raise ValueError("global instruction installation requirements cannot be narrowed")
             targets = value.get("instruction_recomposition_targets", {})
             if not isinstance(targets, dict) or not all(isinstance(k, str) and isinstance(v, str) and v for k, v in targets.items()):
                 raise ValueError("instruction recomposition targets must map paths to identities")

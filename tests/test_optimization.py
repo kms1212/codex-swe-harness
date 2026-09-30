@@ -80,6 +80,7 @@ class OptimizationTests(unittest.TestCase):
         self.assertEqual(select_next_actions(selection_state, proposed)["proposed_action"], {"decision": "reuse", "evidence_ref": "existing"})
         self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "target_identity": "tree-B"}))
         self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "input_identities": {"shared-contract": "changed"}}))
+        self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "repeat_reason": "new_hypothesis"}))
         running = {"work_item_id": "build", "status": "ACTIVE", "verification_scope": "release", "target_identity": "tree-A", "cancelable": True}
         self.assertEqual(running_work_value(running, [passed]), "cancel_if_possible")
         selection_state["work_items"] = [running]

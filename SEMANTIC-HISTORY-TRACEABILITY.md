@@ -18,7 +18,7 @@ The baseline is the semantic-history audit supplied for this change: `6217170` r
 | Workaround policy | Dropped | Global SWE instruction | Conditional | External/uncontrollable or evidenced unavailable direct repair; `common.md` | Yes |
 | Semantic ownership | Moved to wrong scope | Global SWE instruction | Required | Recomposition and instruction-state gate; `common.md`, `instructions.py` | Yes |
 | Information lifetime | Moved to wrong scope | Global SWE instruction | Required | Temporary ledger versus durable contract owner; `common.md` | Yes |
-| Request fidelity | Weakened globally | Global SWE instruction and ledger | Required | Actor/object/source/scope/operation/authority preservation; `common.md`, `core.py` | Yes |
+| Request fidelity | Weakened globally | Global SWE instruction and ledger | Required | Actor/object/source/scope/operation/authority preservation, pasted request resolution; `common.md`, `always_on.py`, `core.py` | Yes |
 | Completion evidence | Preserved/strengthened | Runtime completion gate | Required | Scope PASS and obligation refs; `completion.py` | Yes |
 | Delegated-result consumption | Preserved/strengthened | Runtime lifecycle and completion gate | Required | Return, integration, consumption; `always_on.py`, `completion.py` | Yes |
 | Consumer verification | Preserved/strengthened | Runtime completion gate | Required | Consumer-point PASS; `completion.py`, `instructions.py` | Yes |

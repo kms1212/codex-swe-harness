@@ -268,6 +268,18 @@ class ContractTests(unittest.TestCase):
         state["completion_state"]["semantic_review_required"] = False
         self.assertIn("REPAIR_VERIFICATION_MISSING", {item["code"] for item in evaluate_completion(state)["reasons"]})
 
+    def test_resolved_repair_reuses_matching_scope_after_unrelated_revision(self):
+        state = self.ledger.read()
+        state["obligations"] = [{"id": "o1", "description": "deliver", "status": "SATISFIED", "evidence_refs": ["e2"]}]
+        state["completion_state"].update(candidate_revision="later-unrelated-revision", required_verification_scopes=["tests"], scope_identities={"tests": "tested-content"})
+        repair = verification(2, "tests", "PASS")
+        repair.update(artifact_revision="earlier-revision", target_identity="tested-content", resolves=["r1:0"])
+        state["verification_chronology"] = [verification(1, "tests", "FAIL"), repair]
+        state["reviews"] = [{"review_id": "r1", "findings": [{"criterion": 8, "blocking": True, "disposition": "accepted", "resolution_evidence": ["e2"]}], "disposition": "RESOLVED", "activation": {"native_subagent_id": "child"}, "verification_cutoff_index": 1}]
+        self.assertEqual(evaluate_completion(state)["status"], "COMPLETE")
+        state["completion_state"]["scope_identities"]["tests"] = "changed-content"
+        self.assertIn("REPAIR_VERIFICATION_MISSING", {item["code"] for item in evaluate_completion(state)["reasons"]})
+
     def test_review_must_cover_current_revision_and_target_finding(self):
         state = self.ledger.read()
         state["obligations"] = [{"id": "o1", "description": "deliver", "status": "SATISFIED", "evidence_refs": ["e1"]}]

@@ -106,6 +106,36 @@ def _candidate(cwd: Path, ledger: Ledger) -> tuple[str, list[str], str]:
     return revision, paths, diff.decode("utf-8", "replace")
 
 
+def _session_baseline(ledger: Ledger) -> str | None:
+    return next((event["data"]["fingerprint"] for event in ledger.events() if event["kind"] == "session_candidate_baseline"), None)
+
+
+def _changed_session_paths(ledger: Ledger, cwd: Path, paths: list[str]) -> list[str]:
+    baseline = next((event["data"].get("path_identities", {}) for event in ledger.events() if event["kind"] == "session_candidate_baseline"), None)
+    if baseline is None:
+        return paths
+    result = []
+    for path in paths:
+        file = cwd / path
+        identity = hashlib.sha256(file.read_bytes()).hexdigest() if file.is_file() and not file.is_symlink() else None
+        if baseline.get(path) != identity or path not in baseline:
+            result.append(path)
+    return result
+
+
+def _resolved_request(prompt: str) -> str:
+    """Keep the submitted prompt and resolve a Codex pasted-request attachment."""
+    if "Pasted text contains the user's request" not in prompt:
+        return prompt
+    attachment_root = (Path.home() / ".codex/attachments").resolve()
+    pieces = []
+    for raw in re.findall(r"(/[^\n:]+/\.codex/attachments/[A-Za-z0-9-]+/Pasted text\.txt)", prompt):
+        path = Path(raw).resolve()
+        if path.is_relative_to(attachment_root) and path.is_file() and path.stat().st_size <= 262144:
+            pieces.append(f"[Attachment content from {path}]\n{path.read_text(encoding='utf-8')}")
+    return prompt + ("\n\n" + "\n\n".join(pieces) if pieces else "")
+
+
 def _observe_instruction_changes(ledger: Ledger, revision: str, paths: list[str], cwd: Path | None = None) -> None:
     instructions = instruction_paths(paths)
     if not instructions:
@@ -117,7 +147,7 @@ def _observe_instruction_changes(ledger: Ledger, revision: str, paths: list[str]
     for path in instructions:
         file = cwd / path if cwd else None
         targets[path] = hashlib.sha256(file.read_bytes()).hexdigest() if file and file.is_file() else revision
-    installation = set(completion.get("instruction_installation_required", []))
+    installation = {path for path in completion.get("instruction_installation_required", []) if path.startswith("runtime/instructions/")}
     if cwd and (cwd / "scripts/install_global.py").is_file():
         installation.update(path for path in instructions if path.startswith("runtime/instructions/"))
     source_revision = _run_git(cwd, "rev-parse", "HEAD").decode("utf-8", "replace").strip() if cwd else None
@@ -173,7 +203,8 @@ def _tool_result(event: dict, ledger: Ledger) -> None:
     observed_revision, observed_paths, _ = _candidate(cwd, ledger)
     if "git commit" in command:
         observed_paths += _run_git(cwd, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").decode("utf-8", "replace").splitlines()
-    _observe_instruction_changes(ledger, observed_revision, observed_paths, cwd)
+    if observed_revision != _session_baseline(ledger):
+        _observe_instruction_changes(ledger, observed_revision, _changed_session_paths(ledger, cwd, observed_paths), cwd)
     state = ledger.read()
     index = len(state["verification_chronology"]) + 1
     ref = f"tool:{token}"
@@ -219,9 +250,12 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
     state = ledger.read()
     cwd = Path(event.get("cwd") or os.getcwd())
     fingerprint, paths, diff = _candidate(cwd, ledger)
-    _observe_instruction_changes(ledger, fingerprint, paths or state["completion_state"].get("instruction_recomposition_required", []), cwd)
+    changed = fingerprint != _session_baseline(ledger)
+    paths = _changed_session_paths(ledger, cwd, paths) if changed else []
+    if changed:
+        _observe_instruction_changes(ledger, fingerprint, paths or state["completion_state"].get("instruction_recomposition_required", []), cwd)
     state = ledger.read()
-    if not paths and not state["work_items"] and not state["artifacts"] and not state["completion_state"].get("instruction_recomposition_required"):
+    if not changed and not state["work_items"] and not state["artifacts"] and not state["completion_state"].get("instruction_recomposition_required"):
         ledger.append_event("nonartifact_turn_observed", {"turn_id": event.get("turn_id")})
         return None
     completion = state["completion_state"]
@@ -297,9 +331,14 @@ def handle(event: dict) -> dict | None:
             if not isinstance(prompt, str) or not prompt.strip():
                 return None
             if not ledger.state_path.exists():
-                ledger.create(str(event["session_id"]), prompt[:500], prompt)
-                ledger.update("obligations", {"id": "user-request", "description": prompt[:1000], "status": "IN_PROGRESS", "evidence_refs": []})
+                request = _resolved_request(prompt)
+                ledger.create(str(event["session_id"]), request[:500], request)
+                ledger.update("obligations", {"id": "user-request", "description": request[:1000], "status": "IN_PROGRESS", "evidence_refs": []})
                 ledger.append_event("session_bound", {"session_id": event["session_id"], "cwd": event.get("cwd")})
+                cwd = Path(event.get("cwd") or os.getcwd())
+                baseline, paths, _ = _candidate(cwd, ledger)
+                identities = {path: hashlib.sha256((cwd / path).read_bytes()).hexdigest() if (cwd / path).is_file() and not (cwd / path).is_symlink() else None for path in paths}
+                ledger.append_event("session_candidate_baseline", {"fingerprint": baseline, "path_identities": identities})
             else:
                 ledger.append_event("user_prompt_received", {"turn_id": event.get("turn_id"), "prompt_hash": digest(prompt)})
             return _context(kind, f"SWE task ledger is {ledger.directory}. The original request and parent obligation are recorded. Maintain task state and verification as you work; the lifecycle hooks capture native tool results and enforce review/completion. No user harness command is needed.")

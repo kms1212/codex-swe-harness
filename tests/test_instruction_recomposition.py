@@ -73,12 +73,27 @@ class InstructionRecompositionTests(unittest.TestCase):
             with patch.object(always_on, "STATE_HOME", Path(directory) / "sessions"), patch.object(always_on, "ARCHIVE_HOME", Path(directory) / "archive"):
                 base = {"session_id": session, "cwd": str(project), "turn_id": "turn-1"}
                 always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Recompose AGENTS.md"})
+                (project / "AGENTS.md").write_text("# Principles\nUpdated.\n", encoding="utf-8")
                 result = always_on.handle({**base, "hook_event_name": "Stop", "stop_hook_active": False})
                 self.assertIn("instruction recomposition", result["reason"])
                 completion = Ledger(Path(directory) / "sessions" / session).read()["completion_state"]
                 self.assertIn("AGENTS.md", completion["instruction_recomposition_required"])
                 self.assertNotIn("AGENTS.md", completion["instruction_installation_required"])
                 self.assertIsNone(Ledger(Path(directory) / "sessions" / session).read()["completion_state"]["pending_review_hash"])
+
+    def test_old_local_installation_requirement_can_be_migrated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Ledger(Path(directory))
+            ledger.create("task", "migrate owner", "Local AGENTS is not installed globally")
+            state = ledger.read()
+            state["completion_state"]["instruction_installation_required"] = ["AGENTS.md", "runtime/instructions/common.md"]
+            ledger._write_state(state)
+            completion = ledger.read()["completion_state"]
+            completion["instruction_installation_required"] = ["runtime/instructions/common.md"]
+            ledger.replace("completion_state", completion)
+            self.assertEqual(ledger.read()["completion_state"]["instruction_installation_required"], ["runtime/instructions/common.md"])
+            with self.assertRaises(ValueError):
+                ledger.replace("completion_state", {**completion, "instruction_installation_required": []})
 
 
 if __name__ == "__main__":
