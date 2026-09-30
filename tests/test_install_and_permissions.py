@@ -23,7 +23,7 @@ class InstructionTests(unittest.TestCase):
         for system, selected in (("Darwin", "macos.md"), ("Linux", "linux.md")):
             rendered, fragments = installer.render_instructions(ROOT, system, "revision-one")
             self.assertEqual(fragments, ["common.md", selected])
-            self.assertIn("Global SWE harness", rendered)
+            self.assertIn("Global SWE behavior and harness", rendered)
             self.assertEqual("`/tmp`" in rendered, system == "Darwin")
             first = installer.merge_instructions("My own instruction.\n", rendered)
             self.assertIn("My own instruction.", first)

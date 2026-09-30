@@ -130,10 +130,10 @@ class Ledger:
             validate_authority(value)
         if section == "completion_state":
             previous = state["completion_state"]
-            if previous["semantic_review_required"] and not value.get("semantic_review_required"):
-                raise ValueError("required semantic review cannot be cleared")
             if previous["pending_review_hash"] != value.get("pending_review_hash"):
                 raise ValueError("pending review is adapter-owned")
+            if previous["pending_review_hash"] and not value.get("semantic_review_required"):
+                raise ValueError("pending semantic review cannot be cleared")
             for key in ("required_verification_scopes", "required_consumer_scopes"):
                 if not set(previous[key]) <= set(value.get(key, [])):
                     raise ValueError(f"{key} cannot be narrowed")

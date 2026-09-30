@@ -45,7 +45,7 @@ def is_trivial_diff(paths: list[str], diff: str) -> bool:
     if len(paths) != 1 or "--- /dev/null" in diff:
         return False
     edits = [line for line in diff.splitlines() if line.startswith(("+", "-")) and not line.startswith(("+++", "---"))]
-    return len(edits) == 1 and not any(word in edits[0].lower() for word in ("permission", "security", "auth", "compatib", "version"))
+    return 1 <= len(edits) <= 2 and sum(line.startswith("+") for line in edits) <= 1 and sum(line.startswith("-") for line in edits) <= 1 and not any(word in " ".join(edits).lower() for word in ("permission", "security", "auth", "compatib", "version"))
 
 
 def duplicate_expensive_action(history: Iterable[dict], proposed: dict) -> dict | None:
@@ -76,3 +76,41 @@ def parallelizable(left: dict, right: dict, *, priority: str = "balanced") -> bo
     if priority == "cost" and (left.get("integration_cost", 0) + right.get("integration_cost", 0)) >= left.get("estimated_wall_time", 0) + right.get("estimated_wall_time", 0):
         return False
     return True
+
+
+def select_next_actions(state: dict, proposed: dict | None = None) -> dict:
+    """Select evidence to reuse and only the checks still needed by this candidate.
+
+    This is advisory for Codex tool choice; the completion evaluator remains the
+    authority on whether the declared evidence is sufficient.
+    """
+    completion = state["completion_state"]
+    history = state["verification_chronology"]
+    reuse, run = {}, []
+    for scope in dict.fromkeys(completion["required_verification_scopes"] + completion["required_consumer_scopes"]):
+        identity = completion.get("scope_identities", {}).get(scope)
+        environment = completion.get("scope_environments", {}).get(scope)
+        inputs = completion.get("scope_input_identities", {}).get(scope)
+        matches = [entry for entry in history if entry["scope"] == scope
+                   and (identity is None or entry.get("target_identity") == identity)
+                   and (environment is None or entry.get("execution_environment") == environment)
+                   and (inputs is None or entry.get("input_identities") == inputs)]
+        latest = matches[-1] if matches else None
+        if verification_reusable(latest, identity, completion.get("candidate_revision"), environment, inputs) and (scope not in completion["required_consumer_scopes"] or latest.get("consumer_point")):
+            reuse[scope] = latest["evidence_ref"]
+        else:
+            run.append(scope)
+    cancel = [item["work_item_id"] for item in state["work_items"]
+              if running_work_value(item, history) == "cancel_if_possible"]
+    result = {"reuse_verification": reuse, "run_verification": run,
+              "cancel_running_if_supported": cancel,
+              "modalities": {"REQUIRED": {"missing_declared_scopes": run},
+                             "PERMITTED": {"authority_model": state["authority"]["policy_model"],
+                                           "capabilities": state["authority"].get("capabilities", [])},
+                             "CONDITIONAL": {"review_and_extra_tests": "select for current semantic risk and protection gap"},
+                             "STOP_ECONOMY": {"reused_scopes": reuse, "obsolete_running_work": cancel}}}
+    if proposed is not None:
+        prior = duplicate_expensive_action(history, proposed)
+        result["proposed_action"] = {"decision": "reuse" if prior else "run",
+                                     "evidence_ref": prior.get("evidence_ref") if prior else None}
+    return result

@@ -201,6 +201,15 @@ class ContractTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.ledger.replace("completion_state", dict(value, **changes))
 
+    def test_review_requirement_can_change_with_candidate_after_pending_review(self):
+        value = self.ledger.read()["completion_state"]
+        value["semantic_review_required"] = True
+        self.ledger.replace("completion_state", value)
+        value["semantic_review_required"] = False
+        value["candidate_revision"] = "new-trivial-candidate"
+        self.ledger.replace("completion_state", value)
+        self.assertFalse(self.ledger.read()["completion_state"]["semantic_review_required"])
+
     def test_external_blocker_does_not_stop_independent_ready_work(self):
         state = self.ledger.read()
         state["blockers"] = [{"id": "b", "reason": "need credential for deployment", "external": True, "required_input": "credential"}]
@@ -255,6 +264,8 @@ class ContractTests(unittest.TestCase):
         state["completion_state"].update(candidate_revision="rev1", required_verification_scopes=["tests"], semantic_review_required=True)
         state["verification_chronology"] = [verification(1, "tests", "PASS")]
         state["reviews"] = [{"review_id": "r1", "evidence_package_hash": "h", "reviewer_adapter": "builtin_subagent", "findings": [{"criterion": 4, "severity": "major", "evidence_refs": ["a"], "violated_requirement": "lifetime", "blocking": True, "confidence": 0.9, "disposition": "accepted", "resolution_evidence": ["e1"]}], "disposition": "RESOLVED", "resolution_evidence": ["e1"], "activation": {"native_subagent_id": "child"}, "verification_cutoff_index": 1}]
+        self.assertIn("REPAIR_VERIFICATION_MISSING", {item["code"] for item in evaluate_completion(state)["reasons"]})
+        state["completion_state"]["semantic_review_required"] = False
         self.assertIn("REPAIR_VERIFICATION_MISSING", {item["code"] for item in evaluate_completion(state)["reasons"]})
 
     def test_review_must_cover_current_revision_and_target_finding(self):

@@ -17,7 +17,7 @@ from .core import Ledger, canonical_bytes, digest, review_context_hash
 from .review import BuiltinSubagentAdapter, build_package, route_review
 from .instructions import instruction_paths, recomposition_reasons
 from .permissions import decide as decide_permission
-from .optimization import is_trivial_diff, review_path
+from .optimization import is_trivial_diff, review_path, select_next_actions
 
 STATE_HOME = Path(os.environ.get("HARNESS_V0_STATE_HOME", "/tmp/harness-v0-sessions"))
 ARCHIVE_HOME = Path(os.environ.get("HARNESS_V0_ARCHIVE_HOME", str(Path.home() / ".codex/harness-v0/archive")))
@@ -119,7 +119,7 @@ def _observe_instruction_changes(ledger: Ledger, revision: str, paths: list[str]
         targets[path] = hashlib.sha256(file.read_bytes()).hexdigest() if file and file.is_file() else revision
     installation = set(completion.get("instruction_installation_required", []))
     if cwd and (cwd / "scripts/install_global.py").is_file():
-        installation.update(instructions)
+        installation.update(path for path in instructions if path.startswith("runtime/instructions/"))
     source_revision = _run_git(cwd, "rev-parse", "HEAD").decode("utf-8", "replace").strip() if cwd else None
     if prior == prior | set(instructions) and completion.get("candidate_revision") == revision and targets == completion.get("instruction_recomposition_targets", {}) and installation == set(completion.get("instruction_installation_required", [])) and source_revision == completion.get("instruction_source_revision"):
         return
@@ -243,8 +243,11 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
                   "Then continue verification and review. Do not ask the user to run harness commands.")
         return {"decision": "block", "reason": reason} if not event.get("stop_hook_active") else {"systemMessage": reason}
     change_types = _route(paths)
+    selection = select_next_actions(state)
+    if not any(e["kind"] == "action_selection" and e["data"].get("fingerprint") == fingerprint and e["data"].get("selection") == selection for e in ledger.events()):
+        ledger.append_event("action_selection", {"fingerprint": fingerprint, "selection": selection})
     if change_types:
-        risk = len(paths) > 3 or any(kind in {"architecture", "integration"} for kind in change_types)
+        risk = len(paths) > 1 or any(word in diff.lower() for word in ("compatib", "versioning", "architecture", "public api"))
         path = review_path(change_types, deterministic=is_trivial_diff(paths, diff), semantic_risk=risk)
         routing = route_review(change_types, semantic_risk=path == "semantic_review")
         if path != "semantic_review":
@@ -252,13 +255,13 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
         if not any(e["kind"] == "optimization_choice" and e["data"].get("fingerprint") == fingerprint for e in ledger.events()):
             ledger.append_event("optimization_choice", {"action": path, "reason": "change scope and semantic risk", "fingerprint": fingerprint,
                 "changed_paths": paths, "reusable_evidence": [], "new_evidence": state["completion_state"].get("required_verification_scopes", []), "parallel": False})
-        if routing["required"] and not state["completion_state"]["semantic_review_required"]:
-            state["completion_state"]["semantic_review_required"] = True
+        if routing["required"] != state["completion_state"]["semantic_review_required"] and not state["completion_state"].get("pending_review_hash"):
+            state["completion_state"]["semantic_review_required"] = routing["required"]
             ledger._write_state(state)
             ledger.append_event("review_routed", routing)
             state = ledger.read()
         latest = state["reviews"][-1] if state["reviews"] else None
-        if (routing["required"] or state["completion_state"]["semantic_review_required"]) and not state["completion_state"]["pending_review_hash"] and (not latest or latest.get("candidate_revision") != revision or latest.get("artifact_fingerprint") != fingerprint or latest.get("review_context_hash") != review_context_hash(state)):
+        if routing["required"] and not state["completion_state"]["pending_review_hash"] and (not latest or latest.get("candidate_revision") != revision or latest.get("review_context_hash") != review_context_hash(state)):
             package = build_package(state, routing, {"artifact_refs": paths, "aggregate_diff": diff, "resulting_state": paths}, paths)
             request = BuiltinSubagentAdapter(ledger).prepare(package)
             message = ("The SWE harness prepared a frozen semantic review package. Spawn one fresh built-in subagent now as a read-only semantic evaluator. "
@@ -273,7 +276,7 @@ def _stop(event: dict, ledger: Ledger) -> dict | None:
     result = evaluate_and_record(ledger)
     if result["status"] == "CONTINUE":
         codes = [item["code"] for item in result["reasons"]]
-        reason = (f"The SWE parent completion gate is CONTINUE: {', '.join(codes)}. Update the session ledger from actual work and evidence; "
+        reason = (f"The SWE parent completion gate is CONTINUE: {', '.join(codes)}. Selection: {json.dumps(selection)}. Reuse listed valid evidence, run only listed missing scopes, and cancel obsolete work only when its tool supports cancellation. Update the session ledger from actual work and evidence; "
                   "resolve findings and required verification, then re-evaluate. Do not claim completion or ask the user for harness commands.")
         return {"decision": "block", "reason": reason} if not event.get("stop_hook_active") else {"systemMessage": reason}
     if result["status"] == "BLOCKED":

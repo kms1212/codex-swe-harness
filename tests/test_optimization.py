@@ -8,7 +8,7 @@ from harness_v0 import always_on
 from harness_v0.completion import evaluate_completion, progress_snapshot
 from harness_v0.core import Ledger, initial_state
 from harness_v0.optimization import (duplicate_expensive_action, impacted_scopes, parallelizable,
-                                     review_path, running_work_value, select_checks, verification_reusable)
+                                     review_path, running_work_value, select_checks, select_next_actions, verification_reusable)
 
 
 def state_for(scope="release", identity="tree-A"):
@@ -28,6 +28,8 @@ class OptimizationTests(unittest.TestCase):
         state = state_for()
         state["completion_state"]["candidate_revision"] = "revision-after-commit"
         self.assertEqual(evaluate_completion(state)["status"], "COMPLETE")
+        self.assertEqual(select_next_actions(state)["run_verification"], [])
+        self.assertEqual(select_next_actions(state)["reuse_verification"], {"release": "passed"})
         state["verification_chronology"].append({"chronology_index": 2, "action": "commit", "command_or_tool": "git commit", "scope": "git-identity",
             "observable_result": "tree unchanged", "evidence_ref": "commit-check", "status": "PASS", "artifact_revision": "revision-after-commit",
             "target_identity": "commit-sha", "related_inputs": []})
@@ -37,6 +39,7 @@ class OptimizationTests(unittest.TestCase):
         state = state_for()
         state["completion_state"]["scope_identities"]["release"] = "tree-B"
         self.assertIn("VERIFICATION_MISSING_OR_FAILING", [x["code"] for x in evaluate_completion(state)["reasons"]])
+        self.assertEqual(select_next_actions(state)["run_verification"], ["release"])
         state["completion_state"]["scope_identities"]["release"] = "tree-A"
         state["completion_state"]["scope_environments"] = {"release": "linux"}
         self.assertIn("VERIFICATION_MISSING_OR_FAILING", [x["code"] for x in evaluate_completion(state)["reasons"]])
@@ -72,10 +75,15 @@ class OptimizationTests(unittest.TestCase):
         passed = {"chronology_index": 1, "command_or_tool": "full release verification", "scope": "release", "target_identity": "tree-A", "execution_environment": "macos", "status": "PASS", "observable_result": "passed"}
         proposed = {**passed, "chronology_index": 2, "expensive": True}
         self.assertEqual(duplicate_expensive_action([passed], proposed), passed)
+        selection_state = state_for()
+        selection_state["verification_chronology"] = [passed | {"evidence_ref": "existing"}]
+        self.assertEqual(select_next_actions(selection_state, proposed)["proposed_action"], {"decision": "reuse", "evidence_ref": "existing"})
         self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "target_identity": "tree-B"}))
         self.assertIsNone(duplicate_expensive_action([passed], {**proposed, "input_identities": {"shared-contract": "changed"}}))
         running = {"work_item_id": "build", "status": "ACTIVE", "verification_scope": "release", "target_identity": "tree-A", "cancelable": True}
         self.assertEqual(running_work_value(running, [passed]), "cancel_if_possible")
+        selection_state["work_items"] = [running]
+        self.assertEqual(select_next_actions(selection_state)["cancel_running_if_supported"], ["build"])
         self.assertEqual(running_work_value({**running, "target_identity": "tree-B"}, [passed]), "continue")
         self.assertEqual(running_work_value({**running, "input_identities": {"shared-contract": "changed"}}, [passed]), "continue")
         left = {"work_item_id": "a", "dependencies": [], "write_targets": ["a.py"], "estimated_wall_time": 10, "integration_cost": 2}

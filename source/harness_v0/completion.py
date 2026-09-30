@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .core import Ledger, review_context_hash
-from .optimization import duplicate_expensive_action, parallelizable, running_work_value, verification_reusable
+from .optimization import duplicate_expensive_action, parallelizable, running_work_value, select_next_actions, verification_reusable
 from .instructions import recomposition_reasons
 
 
@@ -83,18 +83,21 @@ def evaluate_completion(state: dict) -> dict:
                 reasons.append({"code": "CURRENT_CANDIDATE_NOT_REVIEWED", "candidate_revision": revision})
             if state["reviews"][-1].get("review_context_hash") != review_context_hash(state):
                 reasons.append({"code": "CURRENT_REQUIREMENTS_NOT_REVIEWED"})
-            for review in state["reviews"]:
-                if not review.get("activation", {}).get("native_subagent_id"):
-                    reasons.append({"code": "REVIEW_ACTIVATION_UNVERIFIED", "review_id": review["review_id"]})
-                for index, finding in enumerate(review["findings"]):
-                    if finding["blocking"] and (finding.get("disposition") not in {"accepted", "partially_accepted", "rejected"} or not finding.get("resolution_evidence")):
-                        reasons.append({"code": "BLOCKING_FINDING_UNRESOLVED", "review_id": review["review_id"], "finding_index": index})
-                    finding_key = f"{review['review_id']}:{index}"
-                    later_pass_refs = {entry["evidence_ref"] for entry in state["verification_chronology"] if entry["status"] == "PASS" and entry["chronology_index"] > review.get("verification_cutoff_index", -1) and entry.get("artifact_revision") == revision and finding_key in entry.get("resolves", []) and (finding["criterion"] != 14 or entry.get("consumer_point"))}
-                    if finding["blocking"] and finding.get("disposition") in {"accepted", "partially_accepted"} and not set(finding.get("resolution_evidence", [])) & later_pass_refs:
-                        reasons.append({"code": "REPAIR_VERIFICATION_MISSING", "review_id": review["review_id"], "finding_index": index})
-                if review["disposition"] != "RESOLVED":
-                    reasons.append({"code": "REVIEW_NOT_CONSUMED", "review_id": review["review_id"]})
+    for review in state["reviews"]:
+        if not review.get("activation", {}).get("native_subagent_id"):
+            reasons.append({"code": "REVIEW_ACTIVATION_UNVERIFIED", "review_id": review["review_id"]})
+        for index, finding in enumerate(review["findings"]):
+            if not finding["blocking"]:
+                continue
+            if finding.get("disposition") not in {"accepted", "partially_accepted", "rejected"} or not finding.get("resolution_evidence"):
+                reasons.append({"code": "BLOCKING_FINDING_UNRESOLVED", "review_id": review["review_id"], "finding_index": index})
+            if finding.get("disposition") in {"accepted", "partially_accepted"}:
+                finding_key = f"{review['review_id']}:{index}"
+                later_pass_refs = {entry["evidence_ref"] for entry in state["verification_chronology"] if entry["status"] == "PASS" and entry["chronology_index"] > review.get("verification_cutoff_index", -1) and entry.get("artifact_revision") == revision and finding_key in entry.get("resolves", []) and (finding["criterion"] != 14 or entry.get("consumer_point"))}
+                if not set(finding.get("resolution_evidence", [])) & later_pass_refs:
+                    reasons.append({"code": "REPAIR_VERIFICATION_MISSING", "review_id": review["review_id"], "finding_index": index})
+        if review["disposition"] != "RESOLVED":
+            reasons.append({"code": "REVIEW_NOT_CONSUMED", "review_id": review["review_id"]})
     live_blockers = [item for item in state["blockers"] if item.get("status") != "RESOLVED"]
     available_work = _available_work_items(state)
     blocked_items = {item["work_item_id"] for item in state["work_items"] if item["status"] == "BLOCKED"}
@@ -142,6 +145,7 @@ def progress_snapshot(state: dict) -> dict:
     parallel_pairs = [[left["work_item_id"], right["work_item_id"]] for i, left in enumerate(actions) for right in actions[i + 1:] if parallelizable(left, right)]
     return {"authorized_remaining_work": [x["id"] for x in state["obligations"] if x["status"] != "SATISFIED"],
             "available_next_actions": [x["work_item_id"] for x in actions],
+            "selection": select_next_actions(state),
             "unresolved_blockers": [x["id"] for x in state["blockers"] if x.get("status") != "RESOLVED"],
             "repeated_actions": repetitions, "duplicate_expensive_actions": redundant,
             "running_work_value": running, "parallelizable_pairs": parallel_pairs}

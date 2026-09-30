@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from .completion import evaluate_and_record, progress_snapshot
+from .optimization import select_next_actions
 from .core import Ledger
 from .review import BuiltinSubagentAdapter, build_package, record_disposition, route_review
 
@@ -40,6 +41,8 @@ def main() -> None:
     disposition.add_argument("evidence_refs", nargs="*")
     sub.add_parser("complete")
     sub.add_parser("progress")
+    select = sub.add_parser("select")
+    select.add_argument("--proposed", type=Path, help="JSON identity of an expensive action under consideration")
     args = parser.parse_args()
     ledger = Ledger(args.ledger)
     if args.operation == "create":
@@ -50,10 +53,7 @@ def main() -> None:
         result = ledger.replace(args.section, json.loads(args.value_file.read_text()))
     elif args.operation == "prepare-review":
         state = ledger.read()
-        prior_required = state["completion_state"]["semantic_review_required"]
-        prior_types = [kind for event in ledger.events() if event["kind"] == "review_routed" and event["data"]["required"] for kind in event["data"]["change_types"]]
-        effective_types = sorted(set(args.type) | (set(prior_types) if prior_required else set()))
-        routing = route_review(effective_types, semantic_risk=args.semantic_risk or prior_required)
+        routing = route_review(sorted(set(args.type)), semantic_risk=args.semantic_risk)
         ledger.append_event("review_routed", routing)
         state["completion_state"]["semantic_review_required"] = routing["required"]
         ledger._write_state(state)
@@ -65,6 +65,8 @@ def main() -> None:
         result = record_disposition(ledger, args.review_id, args.finding_index, args.value, args.evidence_refs)
     elif args.operation == "complete":
         result = evaluate_and_record(ledger)
+    elif args.operation == "select":
+        result = select_next_actions(ledger.read(), json.loads(args.proposed.read_text()) if args.proposed else None)
     else:
         result = progress_snapshot(ledger.read())
     print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))

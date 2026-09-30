@@ -77,7 +77,7 @@ class InstructionRecompositionTests(unittest.TestCase):
                 self.assertIn("instruction recomposition", result["reason"])
                 completion = Ledger(Path(directory) / "sessions" / session).read()["completion_state"]
                 self.assertIn("AGENTS.md", completion["instruction_recomposition_required"])
-                self.assertIn("AGENTS.md", completion["instruction_installation_required"])
+                self.assertNotIn("AGENTS.md", completion["instruction_installation_required"])
                 self.assertIsNone(Ledger(Path(directory) / "sessions" / session).read()["completion_state"]["pending_review_hash"])
 
 
