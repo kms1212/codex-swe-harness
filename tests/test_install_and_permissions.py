@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from harness_v0.core import Ledger
-from harness_v0.permissions import decide
+from harness.core import Ledger
+from harness.permissions import decide
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,6 +33,9 @@ class InstructionTests(unittest.TestCase):
             self.assertIn("revision-two", second)
             self.assertNotIn("revision-one", second)
             self.assertEqual(second.count(installer.START), 1)
+        migrated = installer.merge_instructions("Personal\n" + installer.OLD_START + "\nOld managed text\n" + installer.OLD_END, rendered)
+        self.assertNotIn(installer.OLD_START, migrated)
+        self.assertIn("Personal", migrated)
         with self.assertRaises(ValueError):
             installer.os_fragment("Plan9")
 
@@ -55,17 +58,21 @@ class InstructionTests(unittest.TestCase):
             subprocess.run(["git", "-C", str(source), "-c", "user.name=CI", "-c", "user.email=ci@example.test", "commit", "-qm", "initial"], check=True)
             home.mkdir()
             (home / "AGENTS.md").write_text("Personal instruction.\n")
+            (home / "hooks.json").write_text(json.dumps({"hooks": {"PreToolUse": [{"hooks": [{"type": "command", "command": "echo personal"}]}]}}))
             first = installer.install(source, home, "Darwin")
             first_content = (home / "AGENTS.md").read_text()
             self.assertEqual(first["host_os"], "Darwin")
             self.assertEqual(first["revision"], subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip())
-            generated = source / "source" / "harness_v0.egg-info"
+            generated = source / "source" / "harness.egg-info"
             generated.mkdir(exist_ok=True)
             (generated / "PKG-INFO").write_text("generated metadata")
             second = installer.install(source, home, "Darwin")
             self.assertEqual(first_content, (home / "AGENTS.md").read_text())
             self.assertEqual(second["revision"], first["revision"])
-            self.assertIn("PermissionRequest", json.loads((home / "hooks.json").read_text())["hooks"])
+            hooks = json.loads((home / "hooks.json").read_text())["hooks"]
+            self.assertIn("PermissionRequest", hooks)
+            self.assertEqual(sum(h["command"] == "echo personal" for group in hooks["PreToolUse"] for h in group["hooks"]), 1)
+            self.assertFalse((home / "harness/backups").exists())
             (source / "runtime/instructions/macos.md").write_text("Updated macOS instruction.\n")
             subprocess.run(["git", "-C", str(source), "add", "."], check=True)
             subprocess.run(["git", "-C", str(source), "-c", "user.name=CI", "-c", "user.email=ci@example.test", "commit", "-qm", "update"], check=True)
@@ -75,7 +82,7 @@ class InstructionTests(unittest.TestCase):
             self.assertIn("Updated macOS instruction.", final)
             self.assertIn("Personal instruction.", final)
             self.assertNotIn("because Codex sandbox", final)
-            self.assertEqual(third["revision"], json.loads((home / "harness-v0/installation.json").read_text())["revision"])
+            self.assertEqual(third["revision"], json.loads((home / "harness/installation.json").read_text())["revision"])
             for name, expected in third["modules"].items():
                 self.assertEqual(expected, installer.sha(Path(third["installed_package"]) / name))
 

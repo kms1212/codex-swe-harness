@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 
-from harness_v0.core import digest
-from harness_v0.review import validate_result
+from harness.core import digest
+from harness.review import validate_result
 
 ROOT = Path(__file__).resolve().parents[1]
 

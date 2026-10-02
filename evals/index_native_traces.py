@@ -3,7 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from harness_v0.core import canonical_bytes
+from harness.core import canonical_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSIONS = Path("/Users/kms1212/.codex/sessions/2026/09/28")

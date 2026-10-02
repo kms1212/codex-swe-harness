@@ -1,5 +1,7 @@
 # Semantic history traceability, v0 selection reconstruction
 
+This is the reconstruction recorded at `03f5ae1`, retained as historical provenance. Current semantic owners are specified in ARCHITECTURE.md; this table is not a current installation claim.
+
 The baseline is the semantic-history audit supplied for this change: `6217170` removed the earlier global SWE guidance and the software-evolution and verification references. Later work strengthened completion and delegation, while selection and economy remained weaker or local. This record tracks the resulting current owners. “Installed” means the row is carried by the managed `common.md` fragment or installed runtime; the final installation revision and fresh-session observations must be checked separately.
 
 | Audited requirement | Audit status | Final owner and scope | Modality | Enforcement mechanism and source | Installed |

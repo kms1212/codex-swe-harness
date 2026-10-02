@@ -1,4 +1,4 @@
-"""Optional Codex Stop hook for a task ledger selected by HARNESS_V0_LEDGER.
+"""Optional Codex Stop hook for a task ledger selected by HARNESS_LEDGER.
 
 This script is inert when no ledger is selected. Trust this hook only after
 reviewing its exact installed command and definition in Codex.
@@ -7,13 +7,13 @@ import json
 import os
 import sys
 
-from harness_v0.completion import evaluate_completion, progress_snapshot
-from harness_v0.core import Ledger
+from harness.completion import evaluate_completion, progress_snapshot
+from harness.core import Ledger
 
 
 def main():
     event = json.load(sys.stdin)
-    directory = os.environ.get("HARNESS_V0_LEDGER")
+    directory = os.environ.get("HARNESS_LEDGER")
     if not directory:
         return
     ledger = Ledger(directory)

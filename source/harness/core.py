@@ -19,17 +19,18 @@ def review_context_hash(state: dict) -> str:
     """Fingerprint the task semantics a reviewer must see for a candidate."""
     return digest({
         "original_request": state["original_request"],
-        "confirmed_requirements": [item for item in state["obligations"] if item["status"] != "REJECTED"],
+        "request_state": {k: v for k, v in state.get("request_state", {}).items() if k != "interpreted_through"},
+        "confirmed_requirements": [{k: v for k, v in item.items() if k not in {"status", "evidence_refs"}} for item in state["obligations"] if item["status"] not in {"REJECTED", "SUPERSEDED"}],
         "decision_history": state["decisions"],
         "authority": state["authority"],
         "epistemic": state["epistemic"],
-        "work_items": state["work_items"],
-        "delegated_work": state["delegated_work"],
-        "integration_state": state["integration_state"],
+        "work_items": [{k:v for k,v in item.items() if k not in {"status", "evidence_refs", "verification_refs"}} for item in state["work_items"] if item.get("semantic_role") not in {"reviewer", "unclassified"}],
+        "delegated_work": [{k:v for k,v in item.items() if k not in {"status", "result_refs", "consumed_refs", "integration_refs"}} for item in state["delegated_work"] if item.get("semantic_role") not in {"reviewer", "unclassified"}],
+        "integration_state": {k:v for k,v in state["integration_state"].items() if k not in {"verification_refs", "consumer_refs"}},
         "blockers": state["blockers"],
         "artifacts": state["artifacts"],
-        "instruction_changes": state.get("instruction_changes", []),
-        "completion_requirements": {key: state["completion_state"].get(key) for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required", "scope_identities", "scope_environments", "scope_input_identities", "instruction_recomposition_required", "instruction_recomposition_targets", "instruction_installation_required", "instruction_source_revision")},
+        "instruction_changes": [{k:v for k,v in item.items() if k not in {"active_check_ref", "installed_revision", "candidate_revision", "whole_file_review_ref"}} for item in state.get("instruction_changes", [])],
+        "completion_requirements": {key: state["completion_state"].get(key) for key in ("required_verification_scopes", "required_consumer_scopes", "semantic_review_required", "scope_identities", "scope_environments", "scope_input_identities", "instruction_recomposition_required", "instruction_recomposition_targets", "instruction_installation_required")},
     })
 
 
@@ -38,7 +39,12 @@ def initial_state(task_id: str, objective: str, original_request: str) -> dict:
         raise ValueError("task id, objective and original request are required")
     return {
         "schema_version": 1, "task_id": task_id, "objective": objective,
-        "original_request": original_request, "obligations": [], "blockers": [],
+        "original_request": original_request,
+        "request_history": [{"revision": 1, "turn_id": None, "content": original_request}],
+        "request_state": {"interpreted_through": 1, "semantic_revision": 1, "summary": original_request, "scope": original_request, "priorities": []},
+        "review_schedule": {"assessment": None, "requests": []}, "resources": [], "verification_plans": [], "executions": {},
+        "lifecycle": {"status": "active"}, "commit_scope": None,
+        "obligations": [], "blockers": [],
         "work_items": [], "delegated_work": [],
         "integration_state": {"candidate_changes": [], "integrated_changes": [], "conflicts": [], "unresolved_dependencies": [], "verification_refs": [], "consumer_refs": [], "artifact_refs": []},
         "completion_state": {"status": "CONTINUE", "candidate_revision": None, "pending_review_hash": None, "required_verification_scopes": [], "required_consumer_scopes": [], "scope_identities": {}, "scope_environments": {}, "scope_input_identities": {}, "semantic_review_required": False, "instruction_recomposition_required": [], "instruction_recomposition_targets": {}, "instruction_installation_required": [], "instruction_source_revision": None, "evidence_refs": []},
@@ -85,7 +91,7 @@ class Ledger:
         temporary.replace(self.state_path)
 
     def update(self, section: str, record: dict, *, event_kind: str | None = None) -> dict:
-        allowed = {"obligations", "blockers", "work_items", "delegated_work", "decisions", "epistemic", "evidence", "reviews", "verification_chronology", "artifacts", "instruction_changes"}
+        allowed = {"obligations", "blockers", "work_items", "delegated_work", "decisions", "epistemic", "evidence", "reviews", "verification_chronology", "artifacts", "instruction_changes", "verification_plans"}
         if section not in allowed:
             raise ValueError(f"unsupported section: {section}")
         state = self.read()
@@ -123,11 +129,14 @@ class Ledger:
         return state
 
     def replace(self, section: str, value: dict, *, event_kind: str | None = None) -> dict:
-        if section not in {"integration_state", "completion_state", "authority"}:
+        if section not in {"integration_state", "completion_state", "authority", "commit_scope"}:
             raise ValueError(f"unsupported replacement: {section}")
         state = self.read()
         if section == "authority":
             validate_authority(value)
+        if section == "commit_scope":
+            if not all(value.get(k) for k in ("candidate_revision", "scope", "message")) or not isinstance(value.get("remaining_required_work"), list):
+                raise ValueError("commit scope must identify content, semantic scope, message and remaining required work")
         if section == "completion_state":
             previous = state["completion_state"]
             if previous["pending_review_hash"] != value.get("pending_review_hash"):
@@ -159,6 +168,62 @@ class Ledger:
         return state
 
 
+    def receive_request(self, content: str, turn_id: str | None = None) -> dict:
+        state = self.read()
+        if turn_id and any(x.get("turn_id") == turn_id for x in state["request_history"]):
+            return state
+        revision = len(state["request_history"]) + 1
+        state["request_history"].append({"revision": revision, "turn_id": turn_id, "content": content})
+        state["completion_state"]["status"] = "CONTINUE"
+        self._write_state(state)
+        self.append_event("request_received", {"revision": revision, "turn_id": turn_id, "content": content})
+        return state
+
+    def confirm_request(self, interpretation: dict) -> dict:
+        state = self.read()
+        revision = len(state["request_history"])
+        if interpretation.get("through_revision") != revision:
+            raise ValueError("interpretation must cover the latest request revision")
+        if interpretation.get("change") not in {"none", "add", "remove", "modify", "priority", "cancel"}:
+            raise ValueError("request change classification required")
+        for key in ("summary", "scope", "reason"):
+            if not isinstance(interpretation.get(key), str) or not interpretation[key].strip():
+                raise ValueError(f"request {key} required")
+        if not isinstance(interpretation.get("priorities"), list):
+            raise ValueError("priorities must be explicit and separate from scope")
+        previous = state["request_state"]
+        semantic = {key: interpretation[key] for key in ("summary", "scope", "priorities")}
+        changed = any(previous.get(k) != v for k, v in semantic.items())
+        if interpretation["change"] == "none" and changed:
+            raise ValueError("no semantic change must preserve confirmed state")
+        # A material correction reopens commitments; the integrator can re-satisfy unaffected ones with valid evidence.
+        if interpretation["change"] != "none":
+            for obligation in state["obligations"]:
+                if obligation["status"] == "SATISFIED":
+                    obligation["status"] = "IN_PROGRESS"
+        if interpretation["change"] == "none" and interpretation.get("obligations"):
+            current = {x["id"]: x for x in state["obligations"]}
+            for item in interpretation["obligations"]:
+                prior = current.get(item.get("id"))
+                if not prior or any(item.get(k) != prior.get(k) for k in set(item) - {"status", "evidence_refs"}):
+                    raise ValueError("no-change acknowledgment cannot alter requirements")
+        for obligation in interpretation.get("obligations", []):
+            _validate_record("obligations", obligation, state)
+        if "obligations" in interpretation:
+            old = {x["id"]: x for x in state["obligations"]}
+            for item in interpretation["obligations"]:
+                old[item["id"]] = item
+            state["obligations"] = list(old.values())
+        state["request_state"] = dict(semantic, interpreted_through=revision,
+            semantic_revision=previous["semantic_revision"] + (interpretation["change"] != "none"))
+        state["request_history"][-1]["interpretation"] = interpretation
+        if interpretation["change"] == "cancel":
+            state["lifecycle"]["status"] = "cancelled"
+        self._write_state(state)
+        self.append_event("request_confirmed", {"interpretation": interpretation, "state_hash": digest(state)})
+        return state
+
+
 def validate_authority(authority: dict) -> None:
     policy = authority.get("policy_model")
     if policy not in {"unspecified", "allowlist", "denylist", "capability_set", "mixed", "schema_constrained", "state_machine_constrained"}:
@@ -187,6 +252,7 @@ def validate_authority(authority: dict) -> None:
 
 def _validate_record(section: str, record: dict, state: dict) -> None:
     required = {
+        "verification_plans": ("command_or_tool", "scope", "target_identity", "input_identities", "execution_environment"),
         "obligations": ("id", "description", "status"),
         "blockers": ("id", "reason", "external", "required_input"),
         "work_items": ("work_item_id", "parent_id", "objective", "owner", "status", "dependencies", "produced_changes", "verification_refs", "evidence_refs", "remaining_issues", "integration_notes"),

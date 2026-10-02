@@ -12,10 +12,35 @@ def _latest_verification(state: dict, scope: str) -> dict | None:
     environment = completion.get("scope_environments", {}).get(scope)
     inputs = completion.get("scope_input_identities", {}).get(scope)
     matches = [entry for entry in state["verification_chronology"] if entry["scope"] == scope
-               and (identity is None or entry.get("target_identity") == identity)
+               and (entry.get("artifact_revision") == completion.get("candidate_revision") if identity is None else entry.get("target_identity") == identity)
                and (environment is None or entry.get("execution_environment") == environment)
                and (inputs is None or entry.get("input_identities") == inputs)]
     return matches[-1] if matches else None
+
+
+def _latest_resolution_passes(state: dict, review: dict, index: int) -> set[str]:
+    completion = state["completion_state"]
+    revision = completion.get("candidate_revision")
+    finding = review["findings"][index]
+    passes = set()
+    for entry in state["verification_chronology"]:
+        if f"{review['review_id']}:{index}" not in entry.get("resolves", []) or entry["chronology_index"] <= review.get("verification_cutoff_index", -1):
+            continue
+        # Any later result for the same scope/content/inputs/environment supersedes this one,
+        # even if that result does not repeat the finding's resolves annotation.
+        matching = [e for e in state["verification_chronology"] if e["scope"] == entry["scope"] and all(e.get(k) == entry.get(k) for k in ("target_identity", "input_identities", "execution_environment")) and (entry.get("target_identity") is not None or e.get("artifact_revision") == entry.get("artifact_revision"))]
+        latest = matching[-1]
+        if latest != entry:
+            continue
+        if finding["criterion"] == 14 and not entry.get("consumer_point"):
+            continue
+        if finding.get("disposition") == "superseded" and entry.get("artifact_revision") != revision:
+            continue
+        if verification_reusable(entry, completion.get("scope_identities", {}).get(entry["scope"]), revision,
+                                 completion.get("scope_environments", {}).get(entry["scope"]),
+                                 completion.get("scope_input_identities", {}).get(entry["scope"])):
+            passes.add(entry["evidence_ref"])
+    return passes
 
 
 def _available_work_items(state: dict) -> list[dict]:
@@ -29,9 +54,13 @@ def _available_work_items(state: dict) -> list[dict]:
 def evaluate_completion(state: dict) -> dict:
     """Return COMPLETE, CONTINUE or BLOCKED without equating worker success to parent success."""
     reasons: list[dict] = []
+    if state["request_state"]["interpreted_through"] != len(state["request_history"]):
+        reasons.append({"code": "REQUEST_INTERPRETATION_PENDING", "revision": len(state["request_history"])})
     if not state["obligations"]:
         reasons.append({"code": "OBLIGATIONS_UNDECLARED"})
     for obligation in state["obligations"]:
+        if obligation["status"] in {"REJECTED", "SUPERSEDED"}:
+            continue
         if obligation["status"] != "SATISFIED":
             reasons.append({"code": "OBLIGATION_REMAINING", "id": obligation["id"]})
         elif not obligation.get("evidence_refs"):
@@ -76,30 +105,29 @@ def evaluate_completion(state: dict) -> dict:
             evidence_refs.add(latest["evidence_ref"])
     reasons.extend(recomposition_reasons(state))
     if completion["semantic_review_required"]:
+        matches = [r for r in state["reviews"] if r.get("candidate_revision") == revision]
         if not state["reviews"]:
             reasons.append({"code": "SEMANTIC_REVIEW_MISSING"})
-        else:
-            if state["reviews"][-1].get("candidate_revision") != revision:
-                reasons.append({"code": "CURRENT_CANDIDATE_NOT_REVIEWED", "candidate_revision": revision})
-            if state["reviews"][-1].get("review_context_hash") != review_context_hash(state):
-                reasons.append({"code": "CURRENT_REQUIREMENTS_NOT_REVIEWED"})
+        elif not matches:
+            reasons.append({"code": "CURRENT_CANDIDATE_NOT_REVIEWED", "candidate_revision": revision})
+        if not any(r.get("review_context_hash") == review_context_hash(state) for r in matches):
+            reasons.append({"code": "CURRENT_REQUIREMENTS_NOT_REVIEWED"})
     for review in state["reviews"]:
         if not review.get("activation", {}).get("native_subagent_id"):
             reasons.append({"code": "REVIEW_ACTIVATION_UNVERIFIED", "review_id": review["review_id"]})
         for index, finding in enumerate(review["findings"]):
             if not finding["blocking"]:
                 continue
-            if finding.get("disposition") not in {"accepted", "partially_accepted", "rejected"} or not finding.get("resolution_evidence"):
+            if finding.get("disposition") not in {"accepted", "partially_accepted", "rejected", "superseded"} or not finding.get("resolution_evidence"):
                 reasons.append({"code": "BLOCKING_FINDING_UNRESOLVED", "review_id": review["review_id"], "finding_index": index})
+            if finding.get("disposition") == "superseded":
+                refs = set(finding.get("resolution_evidence", []))
+                current_pass = _latest_resolution_passes(state, review, index)
+                if not refs & current_pass:
+                    reasons.append({"code": "SUPERSEDED_FINDING_EVIDENCE_MISSING", "review_id": review["review_id"], "finding_index": index})
             if finding.get("disposition") in {"accepted", "partially_accepted"}:
                 finding_key = f"{review['review_id']}:{index}"
-                later_pass_refs = {entry["evidence_ref"] for entry in state["verification_chronology"]
-                                   if entry["chronology_index"] > review.get("verification_cutoff_index", -1)
-                                   and finding_key in entry.get("resolves", [])
-                                   and (finding["criterion"] != 14 or entry.get("consumer_point"))
-                                   and verification_reusable(entry, completion.get("scope_identities", {}).get(entry["scope"]), revision,
-                                                             completion.get("scope_environments", {}).get(entry["scope"]),
-                                                             completion.get("scope_input_identities", {}).get(entry["scope"]))}
+                later_pass_refs = _latest_resolution_passes(state, review, index)
                 if not set(finding.get("resolution_evidence", [])) & later_pass_refs:
                     reasons.append({"code": "REPAIR_VERIFICATION_MISSING", "review_id": review["review_id"], "finding_index": index})
         if review["disposition"] != "RESOLVED":

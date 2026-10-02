@@ -7,9 +7,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from harness_v0.core import Ledger, digest, initial_state, review_context_hash, validate_authority
-from harness_v0.review import BuiltinSubagentAdapter, build_package, record_disposition, route_review
-from harness_v0.completion import evaluate_completion, progress_snapshot
+from harness.core import Ledger, digest, initial_state, review_context_hash, validate_authority
+from harness.review import BuiltinSubagentAdapter, build_package, record_disposition, route_review
+from harness.completion import evaluate_completion, progress_snapshot
+from harness.scheduling import assess, schedule, coverage
+from harness.lifecycle import scratch, cleanup, tracking_reasons
 
 
 def verification(index, scope, status, consumer=False):
@@ -64,6 +66,72 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_authority(dict(state["authority"], closure="closed"))
         validate_authority(dict(explicit, policy_model="denylist", default_admissibility="allow", closure="open"))
+
+    def test_request_history_and_current_interpretation_contract(self):
+        ledger = self.ledger
+        old = ledger.read()
+        ledger.receive_request("A와 B만 하라는 게 아니라 전체 범위는 그대로고 우선순위만 그 둘이 높은 거야.", "turn-2")
+        self.assertEqual(ledger.read()["original_request"], old["original_request"])
+        self.assertIn("REQUEST_INTERPRETATION_PENDING", {r["code"] for r in evaluate_completion(ledger.read())["reasons"]})
+        interpretation = {"through_revision": 2, "change": "modify", "summary": "All changes since the 29th", "scope": "All changes since the 29th", "priorities": ["A", "B"], "reason": "Priority does not narrow scope"}
+        with self.assertRaises(ValueError):
+            ledger.confirm_request(dict(interpretation, through_revision=1))
+        ledger.confirm_request(interpretation)
+        state = ledger.read()
+        before = review_context_hash(state)
+        package = build_package(state, route_review(["architecture"]), {"artifact_refs": [], "aggregate_diff": "", "resulting_state": {}}, [])
+        self.assertIn("전체 범위", package["request_history"][-1]["content"])
+        self.assertEqual(package["request_state"]["priorities"], ["A", "B"])
+        ledger.receive_request("Thanks, continue", "turn-3")
+        ledger.confirm_request(dict(interpretation, through_revision=3, change="none", reason="No semantic change"))
+        self.assertEqual(review_context_hash(ledger.read()), before)
+        ledger.receive_request("Change the confirmed output to B", "turn-4")
+        ledger.confirm_request(dict(interpretation, through_revision=4, scope="Output B", summary="Output B", reason="Later requirement change"))
+        self.assertNotEqual(review_context_hash(ledger.read()), before)
+        self.assertEqual(ledger.read()["task_id"], old["task_id"])
+
+    def test_candidate_bound_review_coalescing_and_late_receipt(self):
+        ledger = self.ledger
+        state = ledger.read(); state["completion_state"]["candidate_revision"] = "A"; ledger._write_state(state)
+        candidate = {"artifact_refs": ["source"], "aggregate_diff": "+contract", "resulting_state": {"source": "contract A"}}
+        assess(ledger, {"candidate_revision": "A", "change_types": ["code"], "semantic_risk": True, "reason": "Public contract"})
+        request_a = schedule(ledger, candidate)
+        self.assertIsNone(schedule(ledger, candidate))
+        package_a = json.loads(Path(request_a["package_path"]).read_text())
+        state = ledger.read(); state["completion_state"]["candidate_revision"] = "B"; ledger._write_state(state)
+        assess(ledger, {"candidate_revision": "B", "change_types": ["code"], "semantic_risk": True, "reason": "Changed contract"})
+        request_b = schedule(ledger, dict(candidate, resulting_state={"source": "contract B"}))
+        self.assertNotEqual(request_a["package_hash"], request_b["package_hash"])
+        result = {"review_id": "late-A", "package_hash": request_a["package_hash"], "reviewer_adapter": "builtin_subagent", "findings": [], "overall_completion_risk": "low", "unresolved_unknowns": []}
+        BuiltinSubagentAdapter(ledger).ingest(package_a, result, {"native_subagent_id": "child-A", "package_received": True, "package_hash_verified": request_a["package_hash"], "role_integrity": "read-only semantic evaluator"})
+        self.assertEqual(ledger.read()["completion_state"]["pending_review_hash"], request_b["package_hash"])
+        self.assertFalse(coverage(ledger.read()))
+        self.assertEqual(ledger.read()["reviews"][-1]["candidate_revision"], "A")
+        self.assertFalse(ledger.read()["reviews"][-1]["activation"]["write_capability_removed"])
+
+    def test_artifact_lifetime_and_repository_persistence_are_separate(self):
+        ledger = self.ledger
+        user_file = ledger.directory / "user.md"; user_file.write_text("user-owned")
+        temporary = Path(scratch(ledger, "analysis")); (temporary / "note.md").write_text("Useful once")
+        report = "docs/reports/2026-10-02-analysis.md"
+        state = ledger.read()
+        self.assertEqual(tracking_reasons(state, [report]), [report])
+        # An existing current architecture owner absorbs maintained semantics; scratch keeps the investigation.
+        state["artifacts"] = [{"artifact_id": "current-architecture", "semantic_role": "current contract", "semantic_owner": "ARCHITECTURE.md", "expected_lifetime": "maintained", "current_state_role": "reference", "repository_paths": ["ARCHITECTURE.md"],
+            "persistence": {"separate_file": True, "repository_placement": True, "git_tracking": True, "durable": True, "future_consumer": "developers", "maintainer": "project maintainers", "convention": "existing architecture owner", "contract": "current architecture", "alternatives": "update existing document", "reason": "Maintain current contract"}}]
+        self.assertEqual(tracking_reasons(state, ["ARCHITECTURE.md"]), [])
+        self.assertEqual(tracking_reasons(state, [report]), [report])
+        state["artifacts"].append(dict(state["artifacts"][0], artifact_id="adr", semantic_owner="decisions", repository_paths=["ADR.md"], persistence=dict(state["artifacts"][0]["persistence"], contract="Explicit ADR history requirement", future_consumer="future design decisions")))
+        self.assertEqual(tracking_reasons(state, ["ADR.md"]), [])
+        ledger._write_state(state)
+        unknown = ledger.directory / "scratch" / "unknown"; unknown.mkdir()
+        self.assertEqual(cleanup(ledger), [str(temporary)])
+        self.assertTrue(user_file.is_file()); self.assertTrue(unknown.is_dir())
+        self.assertFalse((ledger.directory / "archive").exists())
+        cancelled = ledger.read(); interpretation = dict(cancelled["request_state"])
+        ledger.receive_request("Cancel the remaining work", "cancel")
+        ledger.confirm_request({"through_revision": 2, "change": "cancel", "summary": "Cancelled", "scope": "Stop remaining work", "priorities": [], "reason": "User cancellation"})
+        self.assertEqual(ledger.read()["lifecycle"]["status"], "cancelled")
 
     def test_code_semantic_risk_requires_review(self):
         self.assertFalse(route_review(["code"])["required"])
@@ -232,7 +300,7 @@ class ContractTests(unittest.TestCase):
 
     def test_stop_hook_continues_gate_without_ready_work_item(self):
         hook = Path(__file__).resolve().parents[1] / "runtime" / "stop_hook.py"
-        env = dict(os.environ, HARNESS_V0_LEDGER=str(self.ledger.directory))
+        env = dict(os.environ, HARNESS_LEDGER=str(self.ledger.directory))
         first = subprocess.run([sys.executable, str(hook)], input=json.dumps({"turn_id": "t", "stop_hook_active": False}), text=True, capture_output=True, env=env, check=True)
         self.assertEqual(json.loads(first.stdout)["decision"], "block")
         self.assertIn("OBLIGATIONS_UNDECLARED", json.loads(first.stdout)["reason"])
@@ -277,6 +345,9 @@ class ContractTests(unittest.TestCase):
         state["verification_chronology"] = [verification(1, "tests", "FAIL"), repair]
         state["reviews"] = [{"review_id": "r1", "findings": [{"criterion": 8, "blocking": True, "disposition": "accepted", "resolution_evidence": ["e2"]}], "disposition": "RESOLVED", "activation": {"native_subagent_id": "child"}, "verification_cutoff_index": 1}]
         self.assertEqual(evaluate_completion(state)["status"], "COMPLETE")
+        state["verification_chronology"].append(dict(repair, chronology_index=3, evidence_ref="e3", status="FAIL", resolves=[]))
+        self.assertIn("REPAIR_VERIFICATION_MISSING", {item["code"] for item in evaluate_completion(state)["reasons"]})
+        state["verification_chronology"].pop()
         state["completion_state"]["scope_identities"]["tests"] = "changed-content"
         self.assertIn("REPAIR_VERIFICATION_MISSING", {item["code"] for item in evaluate_completion(state)["reasons"]})
 

@@ -1,6 +1,6 @@
 """Controlled one-defect-at-a-time cases; labels stay outside reviewer packages."""
-from harness_v0.core import initial_state
-from harness_v0.review import build_package, route_review
+from harness.core import initial_state
+from harness.review import build_package, route_review
 
 
 def cases():

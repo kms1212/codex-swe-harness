@@ -9,7 +9,7 @@ description = "Evidence-bound supervisory contracts for Codex SWE tasks"
 requires-python = ">=3.9"
 
 [project.scripts]
-harness-v0 = "harness_v0.cli:main"
+harness = "harness.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "source"}

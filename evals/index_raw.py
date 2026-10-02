@@ -4,7 +4,7 @@ import json
 import shutil
 from pathlib import Path
 
-from harness_v0.core import canonical_bytes
+from harness.core import canonical_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "eval-results"

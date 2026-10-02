@@ -40,9 +40,10 @@ def build_package(state: dict, routing: dict, candidate_result: dict, source_ref
     if [item["chronology_index"] for item in chronology] != list(range(1, len(chronology) + 1)):
         raise ValueError("verification chronology incomplete")
     package = {
-        "schema_version": 1, "package_id": f"{state['task_id']}-review-{len(state['reviews']) + 1}",
+        "schema_version": 1, "package_id": f"{state['task_id']}-review-{len(state.get('review_schedule', {}).get('requests', [])) + 1}",
         "task_id": state["task_id"], "original_request": state["original_request"],
-        "confirmed_requirements": [x for x in state["obligations"] if x["status"] != "REJECTED"],
+        "request_history": state["request_history"], "request_state": state["request_state"],
+        "confirmed_requirements": [x for x in state["obligations"] if x["status"] not in {"REJECTED", "SUPERSEDED"}],
         "confirmed_decisions": [x for x in state["decisions"] if x["status"] == "CONFIRMED" and not x["superseded_by"]],
         "decision_history": state["decisions"],
         "review_context_hash": review_context_hash(state),
@@ -102,8 +103,9 @@ class BuiltinSubagentAdapter:
         state = self.ledger.read()
         state["completion_state"]["pending_review_hash"] = receipt
         state["completion_state"]["status"] = "CONTINUE"
+        state["review_schedule"]["requests"].append({"package_hash": receipt, "candidate_revision": state["completion_state"].get("candidate_revision"), "request_revision": state["request_state"]["semantic_revision"], "status": "pending", "package_path": str(package_path.absolute())})
         self.ledger._write_state(state)
-        request = {"adapter": self.name, "package_path": str(package_path.resolve()), "package_hash": receipt,
+        request = {"adapter": self.name, "package_path": str(package_path.absolute()), "package_hash": receipt,
                    "instruction": "Fresh semantic evaluator. Read only the frozen package. Verify SHA-256 of its bytes. Return one JSON ReviewResult with package_hash, reviewer_adapter=builtin_subagent, findings, overall_completion_risk and unresolved_unknowns. Do not edit artifacts."}
         self.ledger.append_event("review_requested", request)
         return request
@@ -130,8 +132,24 @@ class BuiltinSubagentAdapter:
                   "verification_cutoff_index": max((entry["chronology_index"] for entry in package["verification_chronology"]), default=0),
                   "candidate_revision": package["relevant_task_state"]["completion_state"].get("candidate_revision"),
                   "review_context_hash": package["review_context_hash"]}
+        review["activation"] = dict(activation, isolation="instruction", write_capability_removed=False)
         self.ledger.update("reviews", review, event_kind="findings_received")
+        receipt_ref = f"review:{result['review_id']}"
+        self.ledger.update("evidence", {"evidence_id": receipt_ref, "producer": activation["native_subagent_id"],
+            "operation": "native semantic review receipt", "observable_result": json.dumps(result, ensure_ascii=False), "scope": "review-receipt",
+            "chronology_index": max(1, len(self.ledger.read()["verification_chronology"])), "artifact_refs": [str(package_path)]})
         state = self.ledger.read()
+        for item in state["work_items"]:
+            if item.get("owner") == activation["native_subagent_id"]:
+                item.update(semantic_role="reviewer", status="INTEGRATED", evidence_refs=[receipt_ref], integration_notes="Role reconciled from validated native package receipt")
+        for item in state["delegated_work"]:
+            if item.get("owner") == activation["native_subagent_id"]:
+                item.update(semantic_role="reviewer", status="CONSUMED", result_refs=[receipt_ref], consumed_refs=[receipt_ref], integration_refs=[receipt_ref])
+        for request in state["review_schedule"]["requests"]:
+            if request["package_hash"] == expected_hash:
+                request.update(status="returned", native_subagent_id=activation["native_subagent_id"])
+                self.ledger.append_event("native_review_identity_reconciled", {"package_hash": expected_hash, "native_subagent_id": activation["native_subagent_id"], "evidence_ref": receipt_ref})
+        self.ledger._write_state(state)
         if state["completion_state"].get("pending_review_hash") == expected_hash:
             state["completion_state"]["pending_review_hash"] = None
             self.ledger._write_state(state)
@@ -140,7 +158,7 @@ class BuiltinSubagentAdapter:
 
 
 def record_disposition(ledger: Ledger, review_id: str, finding_index: int, disposition: str, evidence_refs: list[str]) -> dict:
-    if disposition not in {"accepted", "partially_accepted", "rejected", "unresolved"}:
+    if disposition not in {"accepted", "partially_accepted", "rejected", "unresolved", "superseded"}:
         raise ValueError("invalid disposition")
     state = ledger.read()
     review = next((x for x in state["reviews"] if x["review_id"] == review_id), None)
@@ -154,7 +172,7 @@ def record_disposition(ledger: Ledger, review_id: str, finding_index: int, dispo
     review["findings"][finding_index]["disposition"] = disposition
     review["findings"][finding_index]["resolution_evidence"] = evidence_refs
     review["resolution_evidence"] = sorted({ref for finding in review["findings"] for ref in finding.get("resolution_evidence", [])})
-    review["disposition"] = "RESOLVED" if all(f.get("disposition") in {"accepted", "partially_accepted", "rejected"} and f.get("resolution_evidence") for f in review["findings"]) else "UNRESOLVED"
+    review["disposition"] = "RESOLVED" if all(f.get("disposition") in {"accepted", "partially_accepted", "rejected", "superseded"} and f.get("resolution_evidence") for f in review["findings"]) else "UNRESOLVED"
     ledger._write_state(state)
     ledger.append_event("finding_disposition", {"review_id": review_id, "finding_index": finding_index, "disposition": disposition, "evidence_refs": evidence_refs})
     return review

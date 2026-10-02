@@ -4,10 +4,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from harness_v0 import always_on
-from harness_v0.completion import evaluate_completion, progress_snapshot
-from harness_v0.core import Ledger, initial_state
-from harness_v0.optimization import (duplicate_expensive_action, impacted_scopes, parallelizable,
+from harness import always_on
+from harness.completion import evaluate_completion, progress_snapshot
+from harness.core import Ledger, initial_state
+from harness.scheduling import assess
+from harness.optimization import (duplicate_expensive_action, impacted_scopes, parallelizable,
                                      review_path, running_work_value, select_checks, select_next_actions, verification_reusable)
 
 
@@ -67,7 +68,7 @@ class OptimizationTests(unittest.TestCase):
         self.assertEqual(review_path(["documentation"], deterministic=True), "lightweight")
         self.assertEqual(review_path(["code"]), "scoped_checks")
         self.assertEqual(review_path(["code"], deterministic=True), "scoped_checks")
-        self.assertEqual(review_path(["code", "documentation"], deterministic=True), "semantic_review")
+        self.assertEqual(review_path(["code", "documentation"], deterministic=True), "scoped_checks")
         self.assertEqual(review_path(["architecture"], deterministic=True), "semantic_review")
         self.assertEqual(review_path(["code"], semantic_risk=True), "semantic_review")
 
@@ -88,6 +89,8 @@ class OptimizationTests(unittest.TestCase):
         running = {"work_item_id": "build", "status": "ACTIVE", "verification_scope": "release", "target_identity": "tree-A", "cancelable": True}
         self.assertEqual(running_work_value(running, [passed]), "cancel_if_possible")
         selection_state["work_items"] = [running]
+        self.assertEqual(select_next_actions(selection_state)["cancel_running_if_supported"], [])
+        selection_state["verification_chronology"].pop()
         self.assertEqual(select_next_actions(selection_state)["cancel_running_if_supported"], ["build"])
         self.assertEqual(running_work_value({**running, "target_identity": "tree-B"}, [passed]), "continue")
         self.assertEqual(running_work_value({**running, "input_identities": {"shared-contract": "changed"}}, [passed]), "continue")
@@ -99,6 +102,27 @@ class OptimizationTests(unittest.TestCase):
         state = state_for()
         state["verification_chronology"].append({**state["verification_chronology"][0], "chronology_index": 2, "expensive": True, "evidence_ref": "second"})
         self.assertEqual(progress_snapshot(state)["duplicate_expensive_actions"], [[1, 2]])
+
+    def test_native_duplicate_prevention_and_commit_scope(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = Ledger(directory); ledger.create("parent", "task", "task")
+            cwd = Path(directory)
+            revision = always_on._candidate(cwd, ledger)[0]
+            command = "corepack pnpm run test:unit"
+            passed = {"chronology_index": 1, "action": "run", "command_or_tool": command, "scope": "test", "target_identity": revision, "input_identities": {"repository": revision}, "execution_environment": always_on.sys.platform, "status": "PASS", "observable_result": "passed", "evidence_ref": "p"}
+            ledger.update("verification_chronology", passed)
+            event = {"cwd": str(cwd), "tool_input": {"command": command}, "tool_use_id": "next"}
+            self.assertEqual(always_on._pre_tool(event, ledger)["hookSpecificOutput"]["permissionDecision"], "deny")
+            ledger.update("verification_chronology", dict(passed, chronology_index=2, status="FAIL", evidence_ref="f"))
+            self.assertIsNone(always_on._pre_tool(event, ledger))
+            commit = {"cwd": str(cwd), "tool_input": {"command": "git commit -m 'Separate build test release'"}}
+            ledger.replace("commit_scope", {"candidate_revision": revision, "scope": "Build/test/release responsibility separation", "message": "Separate build test release", "remaining_required_work": ["transitive test duplication", "release still compiles"]})
+            self.assertEqual(always_on._pre_tool(commit, ledger)["hookSpecificOutput"]["permissionDecision"], "deny")
+            ledger.replace("commit_scope", {"candidate_revision": revision, "scope": "Build/test/release responsibility separation", "message": "Separate build test release", "remaining_required_work": []})
+            self.assertIsNone(always_on._pre_tool(commit, ledger))
+            broader = dict(commit, tool_input={"command": "git commit -m 'Complete the entire release'"})
+            self.assertEqual(always_on._pre_tool(broader, ledger)["hookSpecificOutput"]["permissionDecision"], "deny")
+            self.assertEqual(ledger.read()["completion_state"]["required_verification_scopes"], [])
 
     def test_content_identity_survives_commit_and_trivial_stop_skips_review(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -115,7 +139,9 @@ class OptimizationTests(unittest.TestCase):
             (project / "AGENTS.md").write_text("First line\nSecond line\n")
             edited = always_on._candidate(project, ledger)[0]
             self.assertNotEqual(before, edited)
-            with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "ARCHIVE_HOME", root / "archive"):
+            with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "RECOVERY_HOME", root / "archive"):
+                state = ledger.read(); state["completion_state"]["candidate_revision"] = edited; ledger._write_state(state)
+                assess(ledger, {"candidate_revision": edited, "change_types": ["documentation"], "semantic_risk": False, "reason": "Deterministic one-line edit"})
                 response = always_on.handle({"session_id": "session-test-123", "cwd": str(project), "hook_event_name": "Stop", "stop_hook_active": False})
             self.assertIn("CONTINUE", response["reason"])
             self.assertIsNone(ledger.read()["completion_state"]["pending_review_hash"])

@@ -4,8 +4,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-ENTRY = Path("/tmp/codex-swe-harness-v0-rc/bin/harness-v0")
-with tempfile.TemporaryDirectory(prefix="harness-v0-cli-") as directory:
+ENTRY = Path("/tmp/codex-swe-harness-rc/bin/harness")
+with tempfile.TemporaryDirectory(prefix="harness-cli-") as directory:
     root = Path(directory)
     ledger = root / "ledger"
     candidate = root / "candidate.json"

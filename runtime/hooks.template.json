@@ -1,12 +1,12 @@
 {
-  "description": "Purpose-built SWE harness v0 Stop gate for a selected ledger",
+  "description": "Purpose-built SWE harness Stop gate for a selected ledger",
   "hooks": {
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "/tmp/codex-swe-harness-v0-rc/bin/python /Users/kms1212/Documents/codex-swe-harness/runtime/stop_hook.py",
+            "command": "/tmp/codex-swe-harness-rc/bin/python /Users/kms1212/Documents/codex-swe-harness/runtime/stop_hook.py",
             "timeout": 10,
             "statusMessage": "Checking parent completion evidence"
           }

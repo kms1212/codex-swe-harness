@@ -20,12 +20,12 @@ jobs:
       - name: Package and entrypoints
         run: |
           CODEX_HOME="$RUNNER_TEMP/codex-home" python3 scripts/install_global.py > /dev/null
-          python3 -c "import json,os,subprocess; r=json.load(open(os.environ['RUNNER_TEMP']+'/codex-home/harness-v0/installation.json')); assert r['revision']==subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(); assert r['host_os'] in ('Darwin','Linux')"
+          python3 -c "import json,os,subprocess; r=json.load(open(os.environ['RUNNER_TEMP']+'/codex-home/harness/installation.json')); assert r['revision']==subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(); assert r['host_os'] in ('Darwin','Linux')"
           python3 -m pip install --upgrade build
           python3 -m build
           python3 -m pip install dist/*.whl
-          harness-v0 --help
-          printf '{"hook_event_name":"SessionStart","session_id":"ci-session-123"}\n' | python3 -m harness_v0.always_on
+          harness --help
+          printf '{"hook_event_name":"SessionStart","session_id":"ci-session-123"}\n' | python3 -m harness.always_on
       - name: Installed platform selection
         run: |
           PYTHONPATH=source python3 -c "import platform; from pathlib import Path; import importlib.util; spec=importlib.util.spec_from_file_location('installer','scripts/install_global.py'); m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); text, parts=m.render_instructions(Path.cwd(),platform.system(),'ci'); assert parts==['common.md', 'macos.md' if platform.system()=='Darwin' else 'linux.md']; assert ('/tmp' in text)==(platform.system()=='Darwin')"

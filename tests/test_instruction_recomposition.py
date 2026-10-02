@@ -3,10 +3,10 @@ import unittest
 import subprocess
 from pathlib import Path
 
-from harness_v0 import always_on
-from harness_v0.completion import evaluate_completion
-from harness_v0.core import Ledger
-from harness_v0.instructions import instruction_paths
+from harness import always_on
+from harness.completion import evaluate_completion
+from harness.core import Ledger
+from harness.instructions import instruction_paths
 
 
 class InstructionRecompositionTests(unittest.TestCase):
@@ -70,7 +70,7 @@ class InstructionRecompositionTests(unittest.TestCase):
             (project / "scripts/install_global.py").write_text("# installer\n", encoding="utf-8")
             session = "instruction-session-123"
             from unittest.mock import patch
-            with patch.object(always_on, "STATE_HOME", Path(directory) / "sessions"), patch.object(always_on, "ARCHIVE_HOME", Path(directory) / "archive"):
+            with patch.object(always_on, "STATE_HOME", Path(directory) / "sessions"), patch.object(always_on, "RECOVERY_HOME", Path(directory) / "archive"):
                 base = {"session_id": session, "cwd": str(project), "turn_id": "turn-1"}
                 always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Recompose AGENTS.md"})
                 (project / "AGENTS.md").write_text("# Principles\nUpdated.\n", encoding="utf-8")
