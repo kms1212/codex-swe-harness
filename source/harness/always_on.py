@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import subprocess
 import sys
 import time
@@ -423,7 +424,7 @@ def handle(event: dict) -> dict | None:
     kind = event.get("hook_event_name")
     with _locked(ledger):
         if kind == "SessionStart":
-            return _context(kind, f"SWE harness is active. Session ledger: {ledger.directory}. Natural-language work requests are recorded automatically.")
+            return _context(kind, f"SWE harness is active. Session ledger: {ledger.directory}. Natural-language work requests are recorded automatically. CLI: {shlex.quote(sys.executable)} -m harness.cli. Installation manifest: {Path(sys.executable).parent.parent.parent / 'installation.json'} (source_root locates OPERATIONS.md, REVIEW-PROTOCOL.md and COMPLETION.md).")
         if kind == "UserPromptSubmit":
             prompt = event.get("prompt", "")
             if not isinstance(prompt, str) or not prompt.strip():

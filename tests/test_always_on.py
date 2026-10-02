@@ -106,6 +106,8 @@ class AlwaysOnTests(unittest.TestCase):
             with patch.object(always_on, "STATE_HOME", root / "sessions"), patch.object(always_on, "RECOVERY_HOME", root / "archive"):
                 start = always_on.handle({**base, "hook_event_name": "SessionStart", "source": "startup"})
                 self.assertIn("SessionStart", start["hookSpecificOutput"]["hookEventName"])
+                self.assertIn("-m harness.cli", start["hookSpecificOutput"]["additionalContext"])
+                self.assertIn("source_root", start["hookSpecificOutput"]["additionalContext"])
                 prompt = always_on.handle({**base, "hook_event_name": "UserPromptSubmit", "prompt": "Create a useful note file"})
                 self.assertIn("ledger", prompt["hookSpecificOutput"]["additionalContext"])
                 ledger = Ledger(root / "sessions" / session)
